@@ -1,0 +1,11 @@
+{
+ "keys":[
+  {
+   "kty":"RSA",
+   "n":"1RuG1vnups95HRtpHE33XJdD23Uj4-nt4m5yDUicE843BqMOo27Zx-WNF2vRVU_xOjFoPcs5v59j0YF8D-GI8ocUHYsADy6CSUNLToYYUHYrh_QMp3EdB2gmD0rjav4RddZ7HymIoAGLPvrVztMLdRnJ71TZjdzkkT3dQ5_-t8tpukoMGOCiI-F4bMl6KynKV3h5Deb-o4_rZc5OnVQSywymy33HrlsCHBgrv8MWswzw8SxdOxnbLJFETuciqdM9fhIcJgBnzzcw3iaAsBFRpfP95Zw9_eZYUTu2XcWx6XRsQKfBaKMy8NzV55SaQDdJgycrpUX4_bUfWR861708Fw",
+   "e":"AQAB",
+   "kid":"PHPOP-00E",
+   "use":"enc"
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+======================================================
+OpenID Connect Sample RP Implementation
+======================================================
+
+This is a sample RP implementation of the following specifications :
+
+OpenID Connect Core 1.0
+OpenID Connnect Discovery 1.0
+OpenID Connect Registration 1.0
+OpenID Connect Dynamic Registration 1.0
+OpenID Connect Session Management 1.0
+
+
+This Relying Party application interacts with a OpenID Connect authorization server to get get end-user identity,
+as well as basic profile information.

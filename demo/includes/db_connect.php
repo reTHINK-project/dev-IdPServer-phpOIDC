@@ -1,0 +1,3 @@
+<?php
+$pdo = connect();
+?>

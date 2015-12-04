@@ -1,0 +1,15 @@
+======================================================
+OpenID Connect Sample OP Implementation
+======================================================
+
+This is a sample RP implementation of the following specifications :
+
+OpenID Connect Core 1.0
+OpenID Connnect Discovery 1.0
+OpenID Connect Registration 1.0
+OpenID Connect Dynamic Registration 1.0
+OpenID Connect Session Management 1.0
+
+
+The OpenID Provider application performs end-user authentication, authorization, and provides identity
+and basic profile information to  Relying Parties.

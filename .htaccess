@@ -1,0 +1,6 @@
+<IfModule mod_rewrite.c>
+	   RewriteEngine on
+	   RewriteRule ^.well-known/webfinger.*$ /phpOp/discovery.php$1 [NC,L]
+	   RewriteRule ^.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+	   RewriteRule ^phpOp/.well-known/openid-configuration.*$ /phpOp/discovery.php$1 [NC,L]
+</IfModule>
