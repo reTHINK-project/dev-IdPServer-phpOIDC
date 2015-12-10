@@ -90,6 +90,8 @@ elseif($path_info == '/endsession')
     handle_end_session();
 elseif($path_info == '/logout')
     handle_logout();
+elseif($path_info == '/proxy/done')
+    handle_proxy();
 else
     handle_default($path_info);
 

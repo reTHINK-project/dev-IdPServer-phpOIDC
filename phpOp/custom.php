@@ -142,4 +142,18 @@ function handle_webfinger_idp_proxy()
 	   echo "<html><h1>Not Found</h1></html>";
 	return;
 }
+
+function handle_proxy()
+{
+	echo '<script>
+        var jsonString = {};
+        var data = window.location.hash.substring(1).split(\'&\').toString().split(/[=,]+/);
+        for(var i=0; i<data.length; i+=2){jsonString[data[i]]=data[i+1];}
+        var msg = JSON.stringify(jsonString);
+        //Unsecure send to all
+        window.opener.postMessage(msg,"*");
+        window.close();
+        </script>';
+}
+
 ?>
