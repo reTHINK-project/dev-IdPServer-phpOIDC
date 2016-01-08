@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+
+<script type="text/javascript" src="bitcoinjs.min.js"></script>
+<script type="text/javascript" src="bip39.js"></script>
+<script type="text/javascript" src="jsrsasign-latest-all-min.js"></script>
+<script type="text/javascript" src="sjcl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
+
+<script>
+
+
+// generate a ECDSA key pair over curve secp256k1
+function generateECDSA()
+{
+
+	// generate key pair with bitcoinjs-lib
+	var mnemonic = bip39.generateMnemonic(160);
+	var seed = bip39.mnemonicToSeed(mnemonic);
+	var hdnode = bitcoin.HDNode.fromSeedBuffer(seed);
+
+	// public key: generate an uncompressed key with Q = d*G
+	var ecparams = KJUR.crypto.ECParameterDB.getByName('secp256k1');
+	var biPrv = hdnode.keyPair.d; // private key big integer
+	var epPub = ecparams['G'].multiply(biPrv); // d*G
+	var biX = epPub.getX().toBigInteger(); // x from Q
+	var biY = epPub.getY().toBigInteger(); // y from Q
+
+	// generate hex values for private and public key
+	var charlen = ecparams['keylen'] / 4;
+	var hPrv = ('0000000000' + biPrv.toString(16)).slice(- charlen);
+	var hX   = ('0000000000' + biX.toString(16)).slice(- charlen);
+	var hY   = ('0000000000' + biY.toString(16)).slice(- charlen);
+	var hPub = '04' + hX + hY;
+	
+	// generate key pair objects
+	var prvKey = new KJUR.crypto.ECDSA({'curve': 'secp256k1'});
+	prvKey.setPrivateKeyHex(hPrv);
+	prvKey.isPrivate = true;
+	prvKey.isPublic = false;
+	var pubKey = new KJUR.crypto.ECDSA({'curve': 'secp256k1'});
+	pubKey.setPublicKeyHex(hPub);
+	pubKey.isPrivate = false;
+	pubKey.isPublic = true;
+	var publicPEM = KEYUTIL.getPEM(pubKey, 'PKCS8PUB');
+	publicPEM = publicPEM.replace(/(\r\n|\n|\r)/gm,""); // removing line breaks
+	var privatePEM = KEYUTIL.getPEM(prvKey, 'PKCS8PRV');
+
+	console.log('Public Key:');
+	console.log(publicPEM);
+	console.log('Private Key:');
+	console.log(privatePEM);
+	var elem = document.getElementById("privateKey");
+	elem.value = privatePEM;
+	elem = document.getElementById("publicKey");
+	elem.value = publicPEM;
+}
+
+//get a string to be used as a salt
+function generateSalt()
+{
+	// salt
+	var saltWord = bip39.generateMnemonic(8);
+	var saltHashedBitArray = sjcl.hash.sha256.hash(saltWord);
+	var salt = sjcl.codec.base64.fromBits(saltHashedBitArray);
+
+	console.log('Salt:');
+	console.log(salt);
+	var elem = document.getElementById("salt");
+	elem.value = salt;
+}
+
+
+// generate GUID
+function generateGUID()
+{
+	var elem = document.getElementById("publicKey");
+	var publicPEM = elem.value;
+	if (!publicPEM || 0 === publicPEM.length)
+	{
+		generateECDSA();
+		publicPEM = elem.value;
+	}
+	
+	elem = document.getElementById("salt");
+	var salt = elem.value;
+	if (!salt || 0 === salt.length)
+	{
+		generateSalt();
+		salt = elem.value;
+	}
+	var iterations = 10000;
+	var guidBitArray = sjcl.misc.pbkdf2(publicPEM, salt, iterations);
+	var guid = sjcl.codec.base64url.fromBits(guidBitArray);
+
+	console.log('GUID:');
+	console.log(guid);
+	elem = document.getElementById("GUID");
+	elem.innerHTML=guid;
+	$('#qrcode').qrcode(guid);
+}
+
+
+</script>
+
+
+<body>
+
+This page demonstrates the process of generating a GUID:<br>
+Enter a private/public Key pair or generate a ECDSA key pair over curve secp256k1<br>
+<table><tr><td>Private Key <br><textarea id="privateKey" cols="40" rows="5"></textarea></td><td>
+Public Key <br><textarea  id="publicKey" cols="40" rows="5"></textarea></td></tr></table>
+<input type="button" value="generate"  onclick="generateECDSA();"/>
+<br>
+- get the public key in format PKCS#8<br>
+- remove all line breaks<br>
+
+Enter a string to be used as a salt (or it will be generater)<br><textarea  id="salt" cols="40" rows="2"></textarea><br>
+
+- perform PKDF2 with SHA256 with 10000 iterations on the public key, using the salt<br>
+- encode the result in Base64url.<br>
+GUID : <table><tr><td><p id="GUID" style="background-color:yellow;"></p></td><td><div id="qrcode"></div></td></tr></table>
+<input type="button" value="generate"  onclick="generateGUID();"/><br>
+
+<br>
+
+</body>
+</html>
