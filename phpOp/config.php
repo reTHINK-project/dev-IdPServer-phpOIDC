@@ -20,9 +20,9 @@ require_once('doctrine_bootstrap.php');
 
 $status_text = null;
 
-$db_name = 'foo';
-$db_user = 'admindcB23ai';
-$db_password = 'PXch3yzL3UmP';
+$db_name = 'phpoidc_db';
+$db_user = 'username';
+$db_password = 'password';
 $db_host = 'localhost';
 $db_port = '3306';
 $configFileContents = '';

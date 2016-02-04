@@ -1,5 +1,5 @@
 <?
-require_once __DIR__ . '/../../PasswdHash.php';
+require_once __DIR__ . '/../../PasswordHash.php';
 
 if (isset($_POST['submitted'])) {
 foreach($_POST AS $key => $value) { $_POST[$key] = mysql_real_escape_string($value); }

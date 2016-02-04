@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../PasswdHash.php';
+require_once __DIR__ . '/../../PasswordHash.php';
 
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 

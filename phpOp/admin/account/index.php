@@ -5,7 +5,6 @@ include(__DIR__ . '/../config.php');
 <html>
 <head>
     <title></title>
-	<h1> Users </h1>
     <link rel="stylesheet" href="../../css/table.css" type="text/css"/>
 </head>
 <body>

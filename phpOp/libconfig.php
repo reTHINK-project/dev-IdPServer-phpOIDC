@@ -132,6 +132,12 @@ if(isset($argv) && isset($argv[0]) && (basename($argv[0]) == basename(__FILE__))
                     migrate_db();
                 }
                 break;
+            case 'migrateDb' :
+                if(file_exists(OP_DB_CONF_FILE)) {
+                    require_once('migration.php');
+                    migrate_db();
+                }
+                break;
             default:
         }
     }
