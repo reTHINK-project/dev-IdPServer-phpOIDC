@@ -20,8 +20,12 @@ Install mysql and create a database and its user with a password.
     mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';  
     mysql> quit;  
 </code></pre>
-There are two directories/folders: phpOp, and phpRp. They are the source code for OpenID Connect Provider and OpenID Connect Relying Party respecitively. 
 Follow the instruction that appears at the end of the installation (Configure apache for SSL if it were not previously.)  
+There are two directories/folders: phpOp, and phpRp. They are the source code for OpenID Connect Provider and OpenID Connect Relying Party respecitively.  
 Restart apache.  
 
+##Usage
+This IdP OIDC is conform to the Nat Sakimura reference implementation in which we added an IdPProxy in conformance with the WebRTC Security Architecture.  
+The path to the IdP Proxy must be DOMAIN + /.well-known/idp-proxy/ + PROTOCOL  
+The IdPProxy is accessible on the URL .well-known/idp-proxy/rethink-oidc-ns
 
