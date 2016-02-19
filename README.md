@@ -14,7 +14,6 @@ The requirements are the same than the original phpOIDC server (see https://bitb
 
 Install mysql and create a database and its user with a password.
 <pre><code>
-  
     % sudo apt-get install mysql-server  <br>
     % sudo apt-get install gdebi  
     % mysql -p  
