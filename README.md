@@ -12,5 +12,17 @@ The requirements are the same than the original phpOIDC server (see https://bitb
   Doctrine ORM 1.2.4  
   PHPSecLib  
 
+Install mysql and create a database and its user with a password.
+<code>
+    % sudo apt-get install mysql-server  
+    % sudo apt-get install gdebi  
+    % mysql -p  
+    mysql> create database `phpOidc`;  
+    mysql> grant all on phpOidc.* to phpOidc identified by 'new_password';  
+    mysql> quit;  
+    % sudo gdebi phpOidc_1.0-all.deb  
+</code>
+Follow the instruction that appears at the end of the installation (Configure apache for SSL if it were not previously.)  
+Restart apache.  
 
 
