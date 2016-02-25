@@ -23,49 +23,152 @@
 * to the IdP Server. Alternatively some functionnalities can be done locally.
 *
 */
-//class NodeOIDCProxy {
   
-  var SOURCEURL = "https://oidc-ns.kermit.orange-labs.fr/phpOp/index.php",
-      AUTHPATH = "/auth",
-      VERIFYPATH = "/proxy/verify",
-      //DONEPATH = "/proxy/done",
-	  CLIENT_ID='4wBRdEeXzKNS1h67JRCNtA',
-	  DONEPATH='/proxy/done',
-      KEYPATH = '/proxy/key',
+  var SOURCEURL = "https://localhost",
+      AUTHPATH = "/phpOp/index.php/auth",
+      VERIFYPATH = "/phpOp/index.php/validatetoken",
+	  CLIENT_ID='yfVsyslQqwkU_UUuJmEZUg',
+	  CLIENT_SECRET = 'dToM94ZAmiQptw',
+	  DONEPATH='/phpOp/index.php/proxy/done',
+      KEYPATH = '/phpOp/index.php/proxy/key',
+	  IDPATH = '/phpOp/index.php/proxy/id',
       PROXYTYPE = "rethink-oidc-ns",
-      IDSCOPE = "openid",
+      IDSCOPE = "openid profile",
       FULLSCOPE = "openid profile",
       TYPE       =   'id_token token';
-  //var TYPE       =   'code';
-                  
-//  /**
-//  * USER'S OWN IDENTITY
-//  */
-//  constructor() {
-//
-//  }
-//
-//  /**
-//  * Register a new Identity with an Identity Provider
-//  */
-//  registerIdentity() {
-//    // Body...
-//  }
-//
-//  /**
-//  * In relation with a classical Relying Party: Registration
-//  */
-//  registerWithRP() {
-//    // Body...
-//  }
-//
-//  /**
-//  * In relation with a classical Relying Party: Login
-//  * @param  {Identifier}      identifier      identifier
-//  * @param  {Scope}           scope           scope
-//  * @return {Promise}         Promise         IDToken
-//  */
-  function loginWithRP() {
+ 
+if (typeof console == "undefined") {
+    this.console = {
+        log: function () {}
+    };
+}
+
+/**
+ str conversion
+*/
+ function str2ab(str) {
+   var buf = new ArrayBuffer(str.length);
+   var bufView = new Uint8Array(buf);
+   for (var i=0, strLen=str.length; i < strLen; i++) {
+     bufView[i] = str.charCodeAt(i);
+   }
+   return buf;
+ }
+
+ function ab2str(buf) {
+   return String.fromCharCode.apply(null, new Uint8Array(buf));
+ }
+ 
+ 
+/**
+ * 
+ * @return {public Key}              PublicKey
+*/
+  function getProxyKey(header){
+	
+    return new Promise(function(resolve, reject) {
+      var xmlhttp = new XMLHttpRequest();
+      xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+          console.info(xmlhttp.responseText);
+		  var res = JSON.parse(xmlhttp.responseText);
+          if (res.error != undefined) {
+            reject(res.error)
+          } else {
+            resolve(res.keys)
+          }
+        }
+      };
+	  var totor = header.jku;
+      xmlhttp.open("GET", header.jku, true);
+      xmlhttp.send();
+    })
+  }
+  
+  /**
+  *
+  *
+  */
+  function getProxyID(){
+   return CLIENT_ID;
+ 
+ }
+ 
+
+// IDP Proxy code
+var idp = {
+  /**
+  * Generation of an IdAssertion through OIDC IdP
+  */
+  generateAssertion: (contents /*, origin, hint */) => {
+  // TODO : sign contents in the Id Token
+    return new Promise((resolve, reject) => {
+          var _url = SOURCEURL+AUTHPATH+'?scope=' + IDSCOPE + '&client_id=' + CLIENT_ID +
+                     '&redirect_uri=' + SOURCEURL + DONEPATH + '&response_type=' + TYPE +
+                     '&nonce=' + 'N-'+Math.random()
+              // this will open a window with the URL which will open a page
+              // sent by IdP for the user to insert the credentials
+              // the IdP validates the credentials then send a access token
+          window.open(_url, 'openIDrequest', 'width=800, height=600')
+              // respond to events
+          this.addEventListener('message', event => {
+			 console.log(event.origin);
+            if(event.origin !== SOURCEURL) {
+				return;
+			}
+            resolve(JSON.parse(event.data).id_token)
+            //idp.validateAssertion(res.id_token).then(
+            //    response => resolve(response), error => reject(error))
+          },false)
+ }
+)},
+
+  /**
+  * Verification of a received IdAssertion validity (OTHER USER'S IDENTITY)
+  * Can also be used to validate token received by IdP
+  * @param  {DOMString} assertion assertion
+  */
+  validateAssertion: (assertion) => {
+    assertion = assertion.split(".")
+    var header = assertion[0],
+        payload = assertion[1],
+        signature = assertion[2]
+    //TODO there is probably a better way to do that?
+    signature = signature.replace(/_/g, "/").replace(/-/g, "+")
+	var mavariable = JSON.parse(atob(assertion[0]));
+    return new Promise((resolve, reject) =>
+      getProxyKey(mavariable)
+        .then(Key => {
+		    crypto.subtle.importKey('jwk',Key[0],{ name: 'RSASSA-PKCS1-v1_5',hash: {name: "SHA-256"}},true, ['verify'])
+			.then(JWK => {
+			  var test = JWK;
+			  //crypto.verify(algo, key, signature, text2verify);
+			  crypto.subtle.verify('RSASSA-PKCS1-v1_5',
+								   JWK,
+								   str2ab(atob(signature)),   //ArrayBuffer of the signature,
+								   str2ab(header+"."+payload))//ArrayBuffer of the data
+				.then(result => {
+				  if (!result) reject(new Error('Invalid signature on identity assertion'))
+				  else {
+					console.log("Token signature validated")
+					var contents = JSON.parse(atob(payload))
+					resolve({"identity": contents.sub, "contents": contents})
+				  }
+				 })
+				}
+			 )
+			}
+		)
+    )
+},
+
+  /**
+ * In relation with a classical Relying Party: Login
+ * @param  {Identifier}      identifier      identifier
+ * @param  {Scope}           scope           scope
+ * @return {Promise}         Promise         IDToken
+ */
+  loginWithRP: () => {
     return new Promise(function(resolve, reject) {
    //   getProxyKey().then(function(response){
         var IDPROXYID = CLIENT_ID;//response
@@ -91,87 +194,12 @@
       //})
     )
   }
-  
+}
 
 
-  /**
-  * OTHER USER'S IDENTITY
-  */
-
-  /**
-  * Verification of a received IdAssertion validity
-  * Can also be used to validate token received by IdP
-  * @param  {DOMString} assertion assertion
-  */
-  function validateAssertion(assertion) {
-    return new Promise(function(resolve, reject) {
-      getProxyKey().then(function(response){
-        var IDPROXYID = response
-        var xmlhttp = new XMLHttpRequest();
-        xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-          var res = JSON.parse(xmlhttp.responseText);
-          if (res.error != undefined) {
-            reject(res.error)
-          } else {
-            resolve(res.id_token)
-          }
-        }
-      };
-      xmlhttp.open("GET", SOURCEURL+VERIFYPATH+"?key="+IDPROXYID+"&id_token="+assertion, true);
-      xmlhttp.send();
-      }, function(error){
-        reject(error)  
-      })  
-    })
-  }
-
-  /**
-  * Trust level evaluation of a received IdAssertion
-  * @param  {DOMString} assertion assertion
-  */
-  function getAssertionTrustLevel(assertion) {
-    // Body...
-  }
-
-//
-//  /**
-//  * In relation with a Hyperty Instance: Associate identity
-//  */
-//  setHypertyIdentity() {
-//    // Body...
-//  }
-//
-//  /**
-//  * Generates an Identity Assertion for a call session
-//  * @param  {DOMString} contents     contents
-//  * @param  {DOMString} origin       origin
-//  * @param  {DOMString} usernameHint usernameHint
-//  * @return {IdAssertion}              IdAssertion
-//  */
-//  generateAssertion(contents, origin, usernameHint) {
-//    // At the moment login if needed
-//    // Save and send assertion
-//  }
-
-//}
-
-  function getProxyKey(){
-    return new Promise(function(resolve, reject) {
-      var xmlhttp = new XMLHttpRequest();
-      xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-          var res = JSON.parse(xmlhttp.responseText);
-          if (res.error != undefined) {
-            reject(res.error)
-          } else {
-            resolve(res.key)
-          }
-        }
-      };
-      xmlhttp.open("GET", SOURCEURL+KEYPATH, true);
-      xmlhttp.send();
-    })
-  }
-
-console.log("Proxy loaded")
+if (rtcIdentityProvider) {
+  rtcIdentityProvider.register(idp);
+  console.log("Proxy loaded")
+} else {
+  console.warn('IdP not running in the right sandbox');
+}
