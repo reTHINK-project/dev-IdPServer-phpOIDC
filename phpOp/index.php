@@ -21,6 +21,7 @@ include_once('libdb.php');
 include_once('logging.php');
 include_once('OidcException.php');
 include_once('apache_header.php');
+include_once('custom.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 
@@ -65,8 +66,10 @@ switch($path_info) {
 
 logw_debug("Request: %s\nInput: %s\nSession:%s", count($_REQUEST) ? print_r($_REQUEST, true) : 'req[ ]', file_get_contents('php://input'), isset($_SESSION) ? print_r($_SESSION, true) : 'sess[ ]');
 
-
-if($path_info == '/auth')
+if($path_info == '/.well-known/openid-configuration') {
+    require_once('discovery.php');
+	handle_openid_config();
+} else if($path_info == '/auth')
     handle_auth();
 elseif($path_info == '/token')
     handle_token();
@@ -90,6 +93,8 @@ elseif($path_info == '/endsession')
     handle_end_session();
 elseif($path_info == '/logout')
     handle_logout();
+elseif($path_info == '/proxy/done')
+    handle_proxy();
 else
     handle_default($path_info);
 
@@ -644,7 +649,7 @@ function handle_auth() {
         } else {
             if(!$showUI)
                 throw new OidcException('interaction_required', 'unauthenticated and prompt set to none');
-            echo loginform($requested_userid_display, $requested_userid, $client);
+            echo custom_loginform($requested_userid_display, $requested_userid, $client);
         }
     }
     catch(OidcException $e) {
@@ -1522,11 +1527,11 @@ function handle_login() {
             if(in_array('consent', $prompt) || !db_get_user_trusted_client($username, $_SESSION['rpfA']['client_id'])) {
                 if(!$showUI)
                     throw new OidcException('interaction_required', "Unable to show consent page, prompt set to none");
-                echo confirm_userinfo();
+                echo custom_confirm_userinfo(db_get_client($_REQUEST['client_id']));
             } else
                 send_response($username, true);
         } else { // Credential did not match so try again.
-            echo loginform($_REQUEST['username_display'], $_REQUEST['username']);
+            echo custom_loginform($_REQUEST['username_display'], $_REQUEST['username'], db_get_client($_REQUEST['client_id']), false, true);
         }
     }
     catch(OidcException $e)
@@ -1624,7 +1629,9 @@ function handle_client_registration() {
         foreach ($tmp_headers as $header => $value) {
             $headers[strtolower($header)] = $value;
         }
-        if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
+// SBE Modif --> Support of the application/json even if completed (ajax)
+//       if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
+		if (!$headers['content-type'] || strpos($headers['content-type'], 'application/json') === false) {
             throw new OidcException('invalid_client_metadata', 'Unexpected content type');
         }
         $json = file_get_contents('php://input');
