@@ -1,33 +1,11 @@
 <?php
-/**
- * Copyright 2013 Nomura Research Institute, Ltd.
- * Copyright 2016 Orange SA
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
-
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 /**
  * Show Login form.
  * @return String HTML Login form.
  */
 function custom_loginform($display_name = '', $user_id = '', $client = null, $oplogin=false){
-   
-   if($display_name && $user_id) {
 		
-       $userid_field = " <b>{$display_name}</b><input type='hidden' name='username_display' value='{$display_name}'><input type='hidden' name='username' value='{$user_id}'><input type='hidden' name='client_id' value='{$client['client_id']}'><br/>";
-   } else {
-       $userid_field = "<input type='text' name='username' value=''><input type='hidden' name='client_id' value='{$client['client_id']}'>";
-   }
     $logo_uri = '';
     $tos_uri = '';
     $policy_uri = '';
@@ -46,23 +24,25 @@ function custom_loginform($display_name = '', $user_id = '', $client = null, $op
     
    $str='
   <html>
-  <head><title>' . OP_SERVER_NAME . ' OP</title>
+  <head><title> ReThink Authentication </title>
   <meta name="viewport" content="width=320">
   </head>
-  <body style="background-color:#FFEEEE;">
-  <h1>' . OP_SERVER_NAME . ' OIDC Login</h1>' . "\n  <b>Service " . $logo_uri . ' ask for authentication</b>'.'
-  <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . "/{$login_handler}login\">
+  <body style="background-color:#EEEEEE;line-height : 1.5;">
+  <center>
+  <h1>Sign in with your ReTHINK Account</h1>' . "\n  <b>Service " . $logo_uri . ' ask for authentication</b>'.'<br /><br />
+  <form method="POST" action="' . $_SERVER['SCRIPT_NAME'] . "/{$login_handler}login\" style='line-height : 2;'>
   Username:" . $userid_field . '<br />
   Password:<input type="password" name="password" value=""><br />
   <input type="checkbox" name="persist" >Keep me logged in. <br />
   <input type="submit">
   </form>' . "\n  " . $policy_uri . "\n{$tos_uri}" . '
+  </center>
+  <img src="../../../img/rethink.png" />
   </body>
   </html>
   ';
   return $str;
 }
-
 
 
 /**
@@ -97,7 +77,7 @@ function custom_confirm_userinfo($client = null){
 
 $attribute_form_template = <<<EOF
   <div class='persona'>
-  <form method="POST" action="{$_SERVER['SCRIPT_NAME']}/confirm_userinfo">
+  <form method="POST" action="{$_SERVER['SCRIPT_NAME']}/confirm_userinfo" >
   <input type="hidden" name="mode" value="ax_confirm">
   <table cellspacing="0" cellpadding="0" width="600">
   <thead><tr><th>Attribute</th><th>Value</th><th>Confirm</th></tr></thead>
@@ -106,11 +86,11 @@ $attribute_form_template = <<<EOF
   <thead><tr><td><b>Offline Access Requested</b></td><td>$offline_access</td><td></td></tr></thead>
   <tr><td colspan="3">&nbsp;</td></tr>
   <tr><td colspan="3">&nbsp;</td></tr>
-  <tr><td colspan="3"><input type="checkbox" name="agreed" value="1" checked>I Agree to provide the above information. <br/>
+  <tr><td colspan="3"  style='line-height : 2;'><input type="checkbox" name="agreed" value="1" checked>I Agree to provide the above information. <br/>
   <input type="radio" name="trust" value="once" checked>Trust this site this time only <br />
   <input type="radio" name="trust" value="always" >Trust this site always <br/>
   </td></tr>
-  <tr><td colspan="3"><input type="submit" name="confirm" value="confirmed"> </td></tr></table>
+  <tr><td colspan="3"><center><input type="submit" name="confirm" value="confirmed"> </center></td></tr></table>
   </form>
   </div>
 EOF;
@@ -131,9 +111,10 @@ EOF;
   <head><title>' . OP_SERVER_NAME . ' AX Confirm</title>
   <meta name="viewport" content="width=620">' . $styles . '
   </head>
-  <body style="background-color:#FFEEEE;">
-  <h1>' . OP_SERVER_NAME . ' AX Confirm</h1>
-  <h2><b>'.$client['client_name'].'service </b> requests following AX values...</h2>' . $attribute_form_template . '
+  <body background-color:#EEEEEE;line-height : 1.5;>
+  <h1>Attribute Sharing Consent</h1>
+  <h2><b>'.$client['client_name'].' service </b> requests following profile values...</h2>' . $attribute_form_template . '
+  <img src="../../../img/rethink.png" />
   </body>
   </html>
   ';
