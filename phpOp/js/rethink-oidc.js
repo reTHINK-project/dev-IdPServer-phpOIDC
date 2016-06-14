@@ -24,7 +24,7 @@
 *
 */
   
-  var SOURCEURL = "https://localhost",
+  var SOURCEURL = "https://oidc-ns.kermit.orange-labs.fr",
       AUTHPATH = "/phpOp/index.php/auth",
       VERIFYPATH = "/phpOp/index.php/validatetoken",
 	  CLIENT_ID='yfVsyslQqwkU_UUuJmEZUg',
@@ -34,9 +34,11 @@
 	  IDPATH = '/phpOp/index.php/proxy/id',
       PROXYTYPE = "rethink-oidc-ns",
       IDSCOPE = "openid profile",
-      FULLSCOPE = "openid profile",
+      FULLSCOPE = "openid profile webrtc",
       TYPE       =   'id_token token';
- 
+
+var idp_addr = {'domain': "oidc-ns.kermit.orange-labs.fr", 'protocol': PROXYTYPE}
+	  
 if (typeof console == "undefined") {
     this.console = {
         log: function () {}
@@ -100,28 +102,34 @@ var idp = {
   /**
   * Generation of an IdAssertion through OIDC IdP
   */
-  generateAssertion: (contents /*, origin, hint */) => {
+ generateAssertion: (contents /*, origin, hint */) => {
   // TODO : sign contents in the Id Token
     return new Promise((resolve, reject) => {
-          var _url = SOURCEURL+AUTHPATH+'?scope=' + IDSCOPE + '&client_id=' + CLIENT_ID +
+		var _url = SOURCEURL+AUTHPATH+'?scope=' + IDSCOPE + '&client_id=' + CLIENT_ID +
                      '&redirect_uri=' + SOURCEURL + DONEPATH + '&response_type=' + TYPE +
-                     '&nonce=' + 'N-'+Math.random()
-              // this will open a window with the URL which will open a page
-              // sent by IdP for the user to insert the credentials
-              // the IdP validates the credentials then send a access token
-          window.open(_url, 'openIDrequest', 'width=800, height=600')
-              // respond to events
-          this.addEventListener('message', event => {
-			 console.log(event.origin);
-            if(event.origin !== SOURCEURL) {
-				return;
-			}
-            resolve(JSON.parse(event.data).id_token)
-            //idp.validateAssertion(res.id_token).then(
-            //    response => resolve(response), error => reject(error))
-          },false)
- }
-)},
+                     '&nonce=' + 'N-'+Math.random() + '&rtcsdp='+btoa(contents)
+        var myInit = { method: 'GET',
+                     //headers: myHeaders,
+                       credentials: 'same-origin',
+                       // we don't follow redirect so that if user is not logged (redirect)
+                       // we get an error an can return login URL to the application
+                       redirect: 'error'};
+
+        fetch(_url,myInit)
+		.catch(error => {
+		  console.log(error)
+          // We just login but we could do something better maybe?
+          // Handling authorizations and such
+          var loginURL = SOURCEURL+'/login'
+          reject({'name': 'IdPLoginError', 'loginUrl': loginURL, error:'You are not logged'})
+		})	
+        .then(response => response.text())
+        .then(hash => {
+           resolve({'assertion': hash, 'idp': idp_addr})
+        })        
+	}
+  )},
+
 
   /**
   * Verification of a received IdAssertion validity (OTHER USER'S IDENTITY)
@@ -129,11 +137,15 @@ var idp = {
   * @param  {DOMString} assertion assertion
   */
   validateAssertion: (assertion) => {
-    assertion = assertion.split(".")
+    assertion = assertion.assertion.split(".")
     var header = assertion[0],
         payload = assertion[1],
         signature = assertion[2]
     //TODO there is probably a better way to do that?
+	console.log(assertion);
+	console.log(header);
+	console.log(payload);
+	console.log(signature);
     signature = signature.replace(/_/g, "/").replace(/-/g, "+")
 	var mavariable = JSON.parse(atob(assertion[0]));
     return new Promise((resolve, reject) =>
@@ -152,7 +164,7 @@ var idp = {
 				  else {
 					console.log("Token signature validated")
 					var contents = JSON.parse(atob(payload))
-					resolve({"identity": contents.sub, "contents": contents})
+					resolve({"identity": contents.sub+'@'+idp_addr.domain, "contents": contents})
 				  }
 				 })
 				}
@@ -197,7 +209,7 @@ var idp = {
 }
 
 
-if (rtcIdentityProvider) {
+if (typeof rtcIdentityProvider != 'undefined') {//true//rtcIdentityProvider) {
   rtcIdentityProvider.register(idp);
   console.log("Proxy loaded")
 } else {

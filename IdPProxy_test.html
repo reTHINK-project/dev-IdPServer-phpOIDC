@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <title>IdP Proxy NODE/OPENID CONNECT Test page</title>
+  </head>
+  <body>
+  <!--<script src="http://192.168.99.100:8080/.well-known/idp-proxy/rethink-oidc"></script>-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.14.0/jquery.validate.min.js"></script>
+<!--	<script id="proxy" type="text/javascript"></script>	-->
+
+  <script>
+  function test(url, method) {
+	// Remove old proxy
+	var olprox = document.getElementById('proxy');
+	if (olprox != null)
+	{
+		document.getElementsByTagName("head")[0].removeChild(olprox);
+	}
+	// make a new one (to force reload)
+	var script = document.createElement("script");
+	script.type = "text/javascript";
+	script.setAttribute('id','proxy');
+	
+	var start = new Date().getTime();
+	script.src = url+'/.well-known/idp-proxy/'+method;
+	document.getElementsByTagName("head")[0].appendChild(script);
+//	document.getElementById('proxy').src= url+'/.well-known/idp-proxy/'+method;
+	var end = new Date().getTime();
+	var time = end - start;
+	$('#display').html("<pre>received IdPPRoxy in "+time+" ms</pre>");
+	console.log('Load was performed.');
+	console.log(url+"/.well-known/idp-proxy/"+method)
+	return false;
+  }
+  function login(content) {
+	var start = new Date().getTime();
+	idp.generateAssertion(content)
+	    .then(response => {
+	var time = (new Date().getTime()) - start;
+	$('#display').html("<pre>received id_token :"+JSON.stringify(response, null, 4)+" in "+ time +" ms</pre>");
+	console.log("received id_token :", response)
+	start = new Date().getTime();
+	idp.validateAssertion(response)
+	    .then(identity => {
+			time = (new Date().getTime()) - start;
+			$('#display1').html("<pre>User authenticated is "+identity.identity+" in "+ time +" ms</pre>");
+			console.log("User authenticated is "+identity.identity)
+		})
+	})
+	    .catch(error => {
+			$('#display1').html("error: "+JSON.stringify(error, null, 4)+"</pre>");
+			console.error("error: ", error)
+				})
+
+	//So that we don't reload the page
+	return false
+  }
+  
+    //validateAssertion(id_token)
+  </script>
+  <form onsubmit="return test(this.url.value, this.method.value);">
+	<input type="text" id="url" name="url" placeholder="IdP URL"/>
+	<input type="text" id="method" name="method" placeholder="IdP Proxy Method"/>
+	<input type="submit" value="Load"/>
+  </form>
+  <form onsubmit="return login(this.content.value);">
+      <input type="text" id="content" name="content" placeholder="content so sign"/>
+	<input type="submit" value="Test assertion"/>
+  </form>
+    <div id="display">
+   </div>
+  <div id="display1">
+   </div>
+  </body>
+</html>

@@ -406,6 +406,11 @@ function decrypt_verify_jwt($jwt, $client, &$error) {
 }
 
 function handle_auth() {
+	if (isset($_REQUEST['rtcsdp']))
+	{
+		webrtc_handle_auth();
+		exit;
+	}
     $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
     $error_page = OP_INDEX_PAGE;
     $response_mode = 'query';
@@ -1629,7 +1634,7 @@ function handle_client_registration() {
         foreach ($tmp_headers as $header => $value) {
             $headers[strtolower($header)] = $value;
         }
-// SBE Modif --> Support of the application/json even if completed (ajax)
+// SBE Modif
 //       if(!$headers['content-type'] || $headers['content-type'] != 'application/json') {
 		if (!$headers['content-type'] || strpos($headers['content-type'], 'application/json') === false) {
             throw new OidcException('invalid_client_metadata', 'Unexpected content type');
