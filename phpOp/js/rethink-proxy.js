@@ -116,7 +116,7 @@ var idp = {
                        '&redirect_uri=' + SOURCEURL + DONEPATH +
                        '&response_type=' + TYPE +
                        '&nonce=' + nonce
-            reject({'name': 'IdPLoginError', 'loginUrl': loginURL})
+            reject({'name': 'IdPLoginError', 'loginUrl': url})
         } else {
            resolve({'assertion': hint, 'idp': idp_addr})
         }
@@ -129,7 +129,7 @@ var idp = {
   * @param  {DOMString} assertion assertion
   */
  validateAssertion: (assertion) => {
-    assertion = assertion.assertion.split(".")
+    assertion = assertion.split(".")
     var header = assertion[0],
         payload = assertion[1],
         signature = assertion[2]
