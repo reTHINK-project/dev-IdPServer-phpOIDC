@@ -35,9 +35,9 @@
 	console.log(url+"/.well-known/idp-proxy/"+method)
 	return false;
   }
-  function login(content) {
+  function login(content, origin, hint) {
 	var start = new Date().getTime();
-	idp.generateAssertion(content)
+	idp.generateAssertion(content, origin, hint)
 	    .then(response => {
 	var time = (new Date().getTime()) - start;
 	$('#display').html("<pre>received id_token :"+JSON.stringify(response, null, 4)+" in "+ time +" ms</pre>");
@@ -66,8 +66,10 @@
 	<input type="text" id="method" name="method" placeholder="IdP Proxy Method"/>
 	<input type="submit" value="Load"/>
   </form>
-  <form onsubmit="return login(this.content.value);">
-      <input type="text" id="content" name="content" placeholder="content so sign"/>
+  <form onsubmit="return login(this.content.value, this.origin.value, this.hint.value);">
+    <input type="text" id="content" name="content" placeholder="content so sign"/>
+    <input type="text" id="origin" name="origin" placeholder="origin request"/>
+    <input type="text" id="hint" name="hint" placeholder="hint to identity"/>
 	<input type="submit" value="Test assertion"/>
   </form>
     <div id="display">
