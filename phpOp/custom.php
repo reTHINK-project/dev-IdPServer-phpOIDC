@@ -143,6 +143,14 @@ function handle_webfinger_idp_proxy()
 					exit;
 			}
 	}
+	elseif(strpos($_SERVER['REQUEST_URI'], '/rethink-proxy') !== false) {
+    $file = "js/rethink-oidc.js";
+            if (file_exists($file)) {
+     		    	header('Content-Type: application/json');
+     				readfile("js/rethink-proxy.js");
+     				exit;
+     		}
+    }
 	else
 	   echo "<html><h1>Not Found</h1></html>";
 	return;
