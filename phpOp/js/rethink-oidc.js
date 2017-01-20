@@ -148,8 +148,7 @@ var idp = {
 	console.log(signature);
     signature = signature.replace(/_/g, "/").replace(/-/g, "+")
 	var mavariable = JSON.parse(atob(assertion[0]));
-    return new Promise((resolve, reject) =>
-      getProxyKey(mavariable)
+    return getProxyKey(mavariable)
         .then(Key => {
 		    crypto.subtle.importKey('jwk',Key[0],{ name: 'RSASSA-PKCS1-v1_5',hash: {name: "SHA-256"}},true, ['verify'])
 			.then(JWK => {
@@ -167,11 +166,8 @@ var idp = {
 					resolve({"identity": contents.sub+'@'+idp_addr.domain, "contents": contents})
 				  }
 				 })
-				}
-			 )
-			}
-		)
-    )
+			})
+		})
 },
 
   /**
