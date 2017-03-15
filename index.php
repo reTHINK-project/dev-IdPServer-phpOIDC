@@ -15,10 +15,12 @@
 * limitations under the License.
 **/
 
+/* This is only to force HTTPS when no reverse proxying.
 if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != 1) { // force HTTPS
     header('Location: https://' . $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI']);
     exit;
 }
+*/
 ?>
 <html>
 <head>

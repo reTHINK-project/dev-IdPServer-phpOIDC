@@ -1,0 +1,44 @@
+version: '2'
+services:
+
+  'mysql':
+    build:
+      context: "../dev-IdPServer-phpOIDC"
+      dockerfile: Dockerfile_mysql
+    container_name: 'idp_mysql'
+    environment:
+      - MYSQL_ROOT_PASSWORD=reThinkR00T!
+      - MYSQL_DATABASE=phpoidc_01
+      - MYSQL_USER=oidcAppli
+      - MYSQL_PASSWORD=phpOidcNewPsswd*!
+    networks:
+      rethink:
+        ipv4_address: 172.18.0.2
+    ports:
+      - "3306"
+
+  'php-oidc':
+    build: "../dev-IdPServer-phpOIDC"
+    container_name: "phpOIDC"
+    depends_on:
+      - 'mysql'
+    environment:
+      - MYSQL_HOST=idp_mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=phpoidc_01
+      - MYSQL_USER=oidcAppli
+      - MYSQL_PASSWORD=phpOidcNewPsswd*!
+    networks:
+      rethink:
+        ipv4_address: 172.18.0.3
+
+
+networks:
+  rethink:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1
+

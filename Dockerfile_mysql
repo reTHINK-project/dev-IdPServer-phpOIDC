@@ -1,0 +1,4 @@
+FROM mysql 
+MAINTAINER simon.becot@orange.com
+ARG MYSQL_ROOT_PASSWORD
+COPY phpOp/create_db.sql /docker-entrypoint-initdb.d/

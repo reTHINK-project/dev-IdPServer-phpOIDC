@@ -22,6 +22,9 @@ define("LOGLEVEL", 'DEBUG');
 /*
 * Specifies the OP's server name/IP address. By default, it uses what the client uses
 */
+define('RP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
+define('OP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
+
 if (!defined('OP_SERVER_NAME'))
     define('OP_SERVER_NAME', $_SERVER['SERVER_NAME']);
 

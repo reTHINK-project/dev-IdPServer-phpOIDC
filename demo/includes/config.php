@@ -20,11 +20,11 @@ date_default_timezone_set("Europe/Paris");
  * These are the database login details
  */
 
-$wgDBserver         = $_ENV['OPENSHIFT_MYSQL_DB_HOST'];
-$wgDBport 			= $_ENV['OPENSHIFT_MYSQL_DB_PORT'];
-$wgDBname           = $_ENV['OPENSHIFT_APP_NAME'];
-$wgDBuser           = $_ENV['OPENSHIFT_MYSQL_DB_USERNAME'];
-$wgDBpassword       = $_ENV['OPENSHIFT_MYSQL_DB_PASSWORD'];
+$wgDBserver         = $_ENV['MYSQL_HOST'];
+$wgDBport 	    = $_ENV['MYSQL_PORT'];
+$wgDBname           = $_ENV['MYSQL_DATABASE'];
+$wgDBuser           = $_ENV['MYSQL_USER'];
+$wgDBpassword       = $_ENV['MYSQL_PASSWORD'];
 
 define('HOST', $wgDBserver);     // The host you want to connect to.
 define('USER', $wgDBuser);    // The database username.
