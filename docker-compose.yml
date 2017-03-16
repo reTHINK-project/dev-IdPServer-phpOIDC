@@ -5,6 +5,9 @@ services:
     build:
       context: "../dev-IdPServer-phpOIDC"
       dockerfile: Dockerfile_mysql
+      args:
+      - MYSQL_USER=oidcAppli
+      - MYSQL_PASSWORD=phpOidcNewPsswd*!
     container_name: 'idp_mysql'
     environment:
       - MYSQL_ROOT_PASSWORD=reThinkR00T!
