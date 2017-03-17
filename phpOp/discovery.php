@@ -19,6 +19,7 @@ include_once("abconstants.php");
 include_once("libjsoncrypto.php");
 include_once('libdb.php');
 include_once('logging.php');
+include_once('custom.php');
 
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true) : '[ ]', file_get_contents('php://input'));
@@ -26,10 +27,12 @@ logw_debug("Request: %s\nInput: %s", count($_REQUEST) ? print_r($_REQUEST, true)
 
 if(strpos($_SERVER['REQUEST_URI'], '/.well-known/openid-configuration') !== false) {
     handle_openid_config();
-}elseif(strpos($_SERVER['REQUEST_URI'], '/.well-known/webfinger') !== false)
+}elseif(strpos($_SERVER['REQUEST_URI'], '/.well-known/webfinger') !== false) {
     handle_webfinger_discovery();
+}elseif(strpos($_SERVER['REQUEST_URI'], '/.well-known/idp-proxy') !== false){
+    handle_webfinger_idp_proxy();
+}
 exit;
-
 
 function handle_openid_config() {
     global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;

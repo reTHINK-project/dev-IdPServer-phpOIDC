@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `login_UNIQUE` (`sub`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=5 ;
 
+--  Insert a client demo in the phpOIDC database.
+USE `MYSQL_DATABASE`;
+
+INSERT INTO `client` VALUES ('1', '1489748007', 'demo', 'spsecret', '0', 'B-QY663I56kJjA', 'Y3u0jraNnGNHNXa5n2YdtA', NULL, 'web', 'AuthDemo', '', NULL, 'https://auth.rethink2.orange-labs.fr/demo/demoback.php', NULL, 'client_secret_post', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'pairwise', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0', '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

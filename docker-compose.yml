@@ -8,6 +8,7 @@ services:
       args:
       - MYSQL_USER=oidcAppli
       - MYSQL_PASSWORD=phpOidcNewPsswd*!
+      - MYSQL_DATABASE=phpoidc_01
     container_name: 'idp_mysql'
     environment:
       - MYSQL_ROOT_PASSWORD=reThinkR00T!

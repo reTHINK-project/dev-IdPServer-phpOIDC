@@ -2,7 +2,8 @@ FROM mysql
 MAINTAINER simon.becot@orange.com
 ARG MYSQL_USER
 ARG MYSQL_PASSWORD
+ARG MYSQL_DATABASE
 COPY phpOp/create_db.sql /docker-entrypoint-initdb.d/
 COPY demo/demo.sql /docker-entrypoint-initdb.d/
-RUN sed -i "s/MYSQL_USER/"$MYSQL_USER"/"  /docker-entrypoint-initdb.d/demo.sql; sed -i "s/MYSQL_PASSWORD/"$MYSQL_PASSWORD"/"  /docker-entrypoint-initdb.d/demo.sql
+RUN sed -i "s/MYSQL_USER/"$MYSQL_USER"/"  /docker-entrypoint-initdb.d/demo.sql; sed -i "s/MYSQL_PASSWORD/"$MYSQL_PASSWORD"/"  /docker-entrypoint-initdb.d/demo.sql; sed -i "s/MYSQL_DATABASE/"$MYSQL_DATABASE"/"  /docker-entrypoint-initdb.d/demo.sql
 
