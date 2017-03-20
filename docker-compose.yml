@@ -6,15 +6,15 @@ services:
       context: "../dev-IdPServer-phpOIDC"
       dockerfile: Dockerfile_mysql
       args:
-      - MYSQL_USER=oidcAppli
-      - MYSQL_PASSWORD=phpOidcNewPsswd*!
-      - MYSQL_DATABASE=phpoidc_01
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
     container_name: 'idp_mysql'
     environment:
-      - MYSQL_ROOT_PASSWORD=reThinkR00T!
-      - MYSQL_DATABASE=phpoidc_01
-      - MYSQL_USER=oidcAppli
-      - MYSQL_PASSWORD=phpOidcNewPsswd*!
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
       rethink:
         ipv4_address: 172.18.0.2
@@ -29,9 +29,9 @@ services:
     environment:
       - MYSQL_HOST=idp_mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=phpoidc_01
-      - MYSQL_USER=oidcAppli
-      - MYSQL_PASSWORD=phpOidcNewPsswd*!
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
       rethink:
         ipv4_address: 172.18.0.3
