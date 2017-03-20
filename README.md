@@ -9,14 +9,14 @@ There are two ways to install this server. One manually, using the original reco
 Install git, docker, docker-compose.
 
 #### Setup
-Clone the current repository.
-Edit the docker-compose.yml file to setup the mysql parameters (db name and password), then enter those commands (Linux):
+Clone the current repository.  
+__Edit the .env file__ to fix the mysql parameters (db name and password), then enter those commands (Linux):
 
-cd dev-IdPServer-phpOIDC
-docker-compose up -d --build
-This will build two containers and a specific network (172.18.0.0/16). One container is hosting mysql (IP 172.18.0.2) and phpODIC and demo (IP 172.18.0.3).
+cd dev-IdPServer-phpOIDC  
+docker-compose up -d --build  
+This will build two containers and a specific network (172.18.0.0/16). One container is hosting mysql (IP 172.18.0.2) and phpODIC and demo (IP 172.18.0.3).  
 The demo application can use the phpOIDC to authenticate. 
-This distribution is supposed to be exposed behind a reverse proxy in HTTPS.
+This distribution is supposed to be exposed behind a reverse proxy in HTTPS.  
 
 ### Manual installation
 #### Dependency/Requirements 
