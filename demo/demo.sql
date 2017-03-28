@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 --  Insert a client demo in the phpOIDC database.
 USE `MYSQL_DATABASE`;
 
-INSERT INTO `client` VALUES ('1', '1489748007', 'demo', 'spsecret', '0', 'B-QY663I56kJjA', 'Y3u0jraNnGNHNXa5n2YdtA', NULL, 'web', 'AuthDemo', '', NULL, 'https://auth.rethink2.orange-labs.fr/demo/demoback.php', NULL, 'client_secret_post', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'pairwise', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0', '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `client` VALUES ('1', '1489748007', 'demo', 'spsecret', '0', 'B-QY663I56kJjA', 'Y3u0jraNnGNHNXa5n2YdtA', NULL, 'web', 'AuthDemo', '', NULL, 'https://auth.rethink2.orange-labs.fr/demo/demoback.php|https://172.18.0.3/demo/demoback.php', NULL, 'client_secret_post', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'pairwise', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '0', '0', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

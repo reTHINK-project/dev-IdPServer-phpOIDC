@@ -37,8 +37,16 @@ define('SECURE', 'false');
 */
 define("SP_PATH", '/' . basename(dirname($_SERVER['SCRIPT_FILENAME'])));
 
-$SP_URL="https://".$_SERVER["HTTP_X_FORWARDED_SERVER"]."/demo";
-$IDP_URL="https://".$_SERVER["HTTP_X_FORWARDED_SERVER"]."/phpOp/index.php";
+if (array_key_exists ("HTTP_X_FORWARDED_SERVER", $_SERVER))
+{
+  $SP_URL="https://".$_SERVER["HTTP_X_FORWARDED_SERVER"]."/demo";
+  $IDP_URL="https://".$_SERVER["HTTP_X_FORWARDED_SERVER"]."/phpOp/index.php";
+}
+else
+{
+  $SP_URL="https://".$_SERVER["SERVER_NAME"]."/demo";
+  $IDP_URL="https://".$_SERVER["SERVER_NAME"]."/phpOp/index.php";
+}
 
 $REDIRECT_URI=$SP_URL."/demoback.php";
 

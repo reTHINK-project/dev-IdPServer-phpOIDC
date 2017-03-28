@@ -22,8 +22,12 @@ define("LOGLEVEL", 'DEBUG');
 /*
 * Specifies the OP's server name/IP address. By default, it uses what the client uses
 */
-define('OP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
-define('RP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
+/* In case we are behind a reverse proxy, use the FORWARDED SERVER value*/
+if (!defined('OP_SERVER_NAME') && array_key_exists ("HTTP_X_FORWARDED_SERVER", $_SERVER))
+    define('OP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
+if (!defined('OP_SERVER_NAME') && array_key_exists ("HTTP_X_FORWARDED_SERVER", $_SERVER))
+    define('RP_SERVER_NAME', $_SERVER["HTTP_X_FORWARDED_SERVER"]);
+
 if (!defined('OP_SERVER_NAME'))
     define('OP_SERVER_NAME', $_SERVER['SERVER_NAME']);
 

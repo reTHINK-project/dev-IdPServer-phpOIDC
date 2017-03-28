@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+include_once("abconstants.php");
 session_start();
 ?>
 <html>
@@ -98,7 +99,7 @@ session_start();
 			<input type="hidden" name="token_endpoint_auth_method"  id="token_endpoint_auth_method" value="client_secret_post">
             <div class="fieldgroup">
                 <label for="oidc_uri">OIDC Server URI:</label>
-                <input name="oidc_uri" type="url" size=64 value="<?php echo 'https://'.$_SERVER['HTTP_X_FORWARDED_SERVER'].'/phpOp/index.php';?>" id="oidc_uri" required disabled>
+                <input name="oidc_uri" type="url" size=64 value="<?php echo OP_PROTOCOL.OP_SERVER_NAME.'/phpOp/index.php';?>" id="oidc_uri" required disabled>
             </div>
 
             <div class="fieldgroup">
@@ -109,7 +110,7 @@ session_start();
                 <label for="redirect_uris">Redirect URIs: </label>
                 <input name="redirect_uris" type="urlList" size=64 id="redirect_uris" value="
 <?php
-echo "https://".$_SERVER['HTTP_X_FORWARDED_SERVER']."/demo/demoback.php";
+echo OP_PROTOCOL.OP_SERVER_NAME."/demo/demoback.php";
 ?>" required> (url list separated with |)
             </div>
 
