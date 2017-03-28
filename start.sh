@@ -28,6 +28,23 @@ EOF
 cat /tmp/$$ >> /etc/apache2/sites-available/000-default.conf
 rm /tmp/$$
 
+grep -v "/VirtualHost"  /etc/apache2/sites-available/default-ssl.conf > /tmp/$$
+grep -v "/IfModule"  /tmp/$$ > /tmp/$$1
+cat << EOF >> /tmp/$$1
+        <Directory /var/www/html>
+                AllowOverride All
+        </Directory>
+    </VirtualHost>
+</IfModule>
+EOF
+
+:>/etc/apache2/sites-available/default-ssl.conf
+
+cat /tmp/$$1 >> /etc/apache2/sites-available/default-ssl.conf
+rm /tmp/$$
+rm /tmp/$$1
+
+
 service apache2 restart
 
 tail -f /dev/null
