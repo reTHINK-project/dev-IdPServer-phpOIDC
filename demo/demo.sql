@@ -21,7 +21,7 @@ SET time_zone = "+00:00";
 --
 CREATE DATABASE IF NOT EXISTS `demo` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;
 USE `demo`;
-grant all on demo.* to MYSQL_USER identified by 'MYSQL_PASSWORD';
+grant all on demo.* to oidcAppli identified by 'phpOidcNewPsswd*!';
 -- --------------------------------------------------------
 
 --

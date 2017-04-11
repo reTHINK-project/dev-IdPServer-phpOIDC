@@ -87,23 +87,6 @@ if (typeof console == "undefined") {
     })
   }
 
-  /**
-  *
-  *
-  */
-function getProxyID(){
-   return new Promise((resolve, reject) => {
-     var xmlhttp = new XMLHttpRequest()
-     xmlhttp.onreadystatechange = () => {
-       if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-         var res = JSON.parse(xmlhttp.responseText)
-         res.error != undefined ? reject(res.error) : resolve(CLIENT_ID);//res.key)
-       }
-     }
-     xmlhttp.open("GET", SOURCEURL+IDPATH, true)
-     xmlhttp.send()
-   })
- }
 
 
 // IDP Proxy code
@@ -113,13 +96,10 @@ var idp = {
   */
  generateAssertion: function(contents, origin, hint)
 {
-  	// TODO : sign contents in the Id Token
-    return new Promise(function(resolve, reject)
-	{
-		getProxyID().then(ID => {
+  // TODO : sign contents in the Id Token
      		var _url =   SOURCEURL+AUTHPATH+
                      '?scope=' + FULLSCOPE +
-                     '&client_id=' + ID +
+                     '&client_id=' + CLIENT_ID +
                      '&redirect_uri=' + SOURCEURL + DONEPATH +
                      '&response_type=' + TYPE +
                      '&nonce=' + 'N-'+Math.random() +
@@ -133,27 +113,19 @@ var idp = {
 		              //redirect: 'error'
 		             };
 
-		fetch(_url,myInit).then(response => {
+		return fetch(_url,myInit)
+    .then(response => {
 		    if(response.redirected){
 		        //Change response_mode=body to default, will make proxy/done close the popup after login
 		        var loginUrl = response.url.replace('%26response_mode%3D'+RESPONSE_MODE, '')
-		        reject({'name': 'IdpLoginError', 'loginUrl': loginUrl, 'requestedUrl': _url})
+		        throw {'name': 'IdpLoginError', 'loginUrl': loginUrl, 'requestedUrl': _url}
 		    }
 		    else
 		        return response.text()
 		})
 		.then(text => {
-			resolve({'assertion': text, 'idp': idp_addr})
-        	 })
-		.catch(error => {
-			  console.log(error)
-			  // We just login but we could do something better maybe?
-			  // Handling authorizations and such
-			  var loginURL = SOURCEURL+'/login'
-			  reject({'name': 'IdpLoginError', 'loginUrl': loginURL, 'requestedUrl': _url})
-		})
-	})
-})
+			return {'assertion': text, 'idp': idp_addr}
+    })
 },
 
 
@@ -168,37 +140,38 @@ var idp = {
         payload = assertion[1],
         signature = assertion[2]
     //TODO there is probably a better way to do that?
-	console.log(assertion);
-	console.log(header);
-	console.log(payload);
-	console.log(signature);
-  signature = signature.replace(/_/g, "/").replace(/-/g, "+");
-	var mavariable = JSON.parse(atob(assertion[0]));
-  return getProxyKey(mavariable)
-  .then(Key => { crypto.subtle.importKey('jwk',Key[0], { name: 'RSASSA-PKCS1-v1_5',hash: {name: "SHA-256"}},true, ['verify'])
-	.then(JWK => { crypto.subtle.verify('RSASSA-PKCS1-v1_5',
-								   JWK,
-								   str2ab(atob(signature)),   //ArrayBuffer of the signature,
-								   str2ab(header+"."+payload))//ArrayBuffer of the data
-	.then(result => {
-		if (!result) return Promise.reject({'name':'IdpError', 'message':'162: Invalid signature on identity assertion'})
-		else {
-			console.log("Token signature validated");
-			var contents = JSON.parse(atob(payload));
-			var name = contents.sub.split('@')[0];
-      //From peerConnectionIdP.jsm
-      let provider = idp_addr.domain;
-      let providerPortIdx = provider.indexOf(':');
-		  if (providerPortIdx > 0) {
-			   provider = provider.substring(0, providerPortIdx);
-		  }
-      return Promise.resolve({'identity': name+'@'+provider, 'contents': contents});//, 'acr': json.dummy_acr}) //resolve
+    console.log("assertion + header + payload + signature");
+    console.log(assertion);
+  	console.log(header);
+  	console.log(payload);
+  	console.log(signature);
+    signature = signature.replace(/_/g, "/").replace(/-/g, "+");
+  	var mavariable = JSON.parse(atob(assertion[0]));
+    return getProxyKey(mavariable)
+    .then(Key => {
+      return crypto.subtle.importKey('jwk',Key[0], { name: 'RSASSA-PKCS1-v1_5',hash: {name: "SHA-256"}},true, ['verify'])
+    })
+	  .then(JWK => {
+      return crypto.subtle.verify('RSASSA-PKCS1-v1_5', JWK, str2ab(atob(signature)), str2ab(header+"."+payload))
+    })
+	  .then(result => {
+  		if (!result)
+        return Promise.reject({'name':'IdpError', 'message':'162: Invalid signature on identity assertion'})
+  		else {
+  			console.log("Token signature validated");
+  			var contents = JSON.parse(atob(payload));
+  			var name = contents.sub.split('@')[0];
+        //From peerConnectionIdP.jsm
+        let provider = idp_addr.domain;
+        let providerPortIdx = provider.indexOf(':');
+  		  if (providerPortIdx > 0) {
+  			   provider = provider.substring(0, providerPortIdx);
+  		  }
+        return Promise.resolve({'identity': name+'@'+provider, 'contents': contents});//, 'acr': json.dummy_acr}) //resolve
 			//return resolve({"identity": contents.sub+'@'+idp_addr.domain, "contents": contents})
-		}
-  })
-	})
-})
-.catch(error => reject({'name':'IdpError', 'message':'171: '+error}))
+		  }
+    })
+    .catch(error => reject({'name':'IdpError', 'message':'171: '+error}))
 },
 
   /**

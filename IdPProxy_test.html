@@ -23,7 +23,7 @@
 	var script = document.createElement("script");
 	script.type = "text/javascript";
 	script.setAttribute('id','proxy');
-	
+
 	var start = new Date().getTime();
 	script.src = url+'/.well-known/idp-proxy/'+method;
 	document.getElementsByTagName("head")[0].appendChild(script);
@@ -38,27 +38,27 @@
   function login(content, origin, hint) {
 	var start = new Date().getTime();
 	idp.generateAssertion(content, origin, hint)
-	    .then(response => {
-	var time = (new Date().getTime()) - start;
-	$('#display').html("<pre>received id_token :"+JSON.stringify(response, null, 4)+" in "+ time +" ms</pre>");
-	console.log("received id_token :", response)
-	start = new Date().getTime();
-	idp.validateAssertion(response.assertion)
-	    .then(identity => {
-			time = (new Date().getTime()) - start;
-			$('#display1').html("<pre>User authenticated is "+identity.identity+" in "+ time +" ms</pre>");
-			console.log("User authenticated is "+identity.identity)
-		})
-	})
-	    .catch(error => {
-			$('#display1').html("error: "+JSON.stringify(error, null, 4)+"</pre>");
-			console.error("error: ", error)
-				})
-
+	.then(
+      response => {
+    	var time = (new Date().getTime()) - start;
+    	$('#display').html("<pre>received id_token :"+JSON.stringify(response, null, 4)+" in "+ time +" ms</pre>");
+    	console.log("received id_token :", response)
+    	start = new Date().getTime();
+    	idp.validateAssertion(response.assertion)
+    	    .then(identity => {
+    			time = (new Date().getTime()) - start;
+    			$('#display1').html("<pre>User authenticated is "+identity.identity+" in "+ time +" ms</pre>");
+    			console.log("User authenticated is "+identity.identity)
+    		 })
+    	})
+  .catch(error => {
+         $('#display1').html("error: "+JSON.stringify(error, null, 4)+"</pre>");
+         console.error("error: ", error)
+  })
 	//So that we don't reload the page
 	return false
   }
-  
+
     //validateAssertion(id_token)
   </script>
   <form onsubmit="return test(this.url.value, this.method.value);">

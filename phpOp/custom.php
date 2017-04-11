@@ -1,4 +1,7 @@
 <?php
+include_once("libjsoncrypto.php");
+include_once('libdb.php');
+include_once('logging.php');
 
 /**
  * Show Login form.
@@ -131,40 +134,10 @@ EOF;
 
 
 
-function register_client_idpproxy_as_a_client($client_id)
+function register_client_idpproxy($client_id)
 {
       global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
 
-      $keys = Array( 'contacts' => NULL,
-          'application_type' => "web",
-          'client_name' => "IdPProxy",
-          'logo_uri' => NULL,
-          'redirect_uris' => OP_PROTOCOL.OP_SERVER_NAME."/phpOp/index.php/proxy/done",
-          'post_logout_redirect_uris' => NULL,
-          'token_endpoint_auth_method' => array('client_secret_basic', 'client_secret_post','private_key_jwt', 'client_secret_jwt'),
-          'token_endpoint_auth_signing_alg' => $signing_alg_values_supported,
-          'policy_uri' => NULL,
-          'tos_uri' => NULL,
-          'jwks_uri' => NULL,
-          'jwks' => NULL,
-          'sector_identifier_uri' => NULL,
-          'subject_type' => array('pairwise', 'public'),
-          'request_object_signing_alg' => $signing_alg_values_supported,
-          'userinfo_signed_response_alg' => $signing_alg_values_supported,
-          'userinfo_encrypted_response_alg' => $encryption_alg_values_supported,
-          'userinfo_encrypted_response_enc' => $encryption_enc_values_supported,
-          'id_token_signed_response_alg' => $signing_alg_values_supported,
-          'id_token_encrypted_response_alg' => $encryption_alg_values_supported,
-          'id_token_encrypted_response_enc' => $encryption_enc_values_supported,
-          'default_max_age' => NULL,
-          'require_auth_time' => NULL,
-          'default_acr_values' => NULL,
-          'initiate_login_uri' => NULL,
-          'request_uris' => NULL,
-          'response_types' => NULL,
-          'grant_types' => NULL,
-
-      );
 
       $client_secret = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
       $reg_token = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
@@ -175,12 +148,17 @@ function register_client_idpproxy_as_a_client($client_id)
           'client_secret' => $client_secret,
           'client_secret_expires_at' => 0,
           'registration_access_token' => $reg_token,
-          'registration_client_uri_path' => $reg_client_uri_path
+          'registration_client_uri_path' => $reg_client_uri_path,
+          'application_type' => "web",
+          'client_name' => "IdPProxy",
+          'logo_uri' => NULL,
+          'redirect_uris' => OP_PROTOCOL.OP_SERVER_NAME."/phpOp/index.php/proxy/done",
+          'token_endpoint_auth_method' => 'client_secret_post'
       );
       log_debug("client registration params = %s", print_r($params, true));
       db_save_client($client_id, $params);
 
-      return $secret;
+      return $client_secret;
 }
 
 /**
@@ -199,7 +177,7 @@ function handle_webfinger_idp_proxy()
 					$str=str_replace("SOURCE_PROTOCOLE", OP_PROTOCOL,$str);
           // Then get a temp CLIENT_ID and CLIENT_SECRET
           $client_id=base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-          $secret= register_client_idpproxy_as_a_client($client_id);
+          $secret= register_client_idpproxy($client_id);
           $str=str_replace("SET_CLIENT_ID", $client_id, $str);
 					$str=str_replace("SET_CLIENT_SECRET", $secret, $str);
 					echo $str;
@@ -226,268 +204,295 @@ function handle_proxy()
 
 function webrtc_handle_auth() {
 
-    $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
-    $error_page = OP_INDEX_PAGE;
-    $response_mode = 'query';
+  $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
+  $error_page = OP_INDEX_PAGE;
+  $response_mode = 'query';
+  log_info('-----------------Step  %d', 1);
 
-    try{
-        if(!isset($_REQUEST['client_id']))
-            throw new OidcException('invalid_request', 'no client');
-        // check client id
-        $client = db_get_client($_REQUEST['client_id']);
-        if(!$client)
-            throw new OidcException('unauthorized_client', 'Client ID not found');
+  try{
+      if(!isset($_REQUEST['client_id']))
+          throw new OidcException('invalid_request', 'no client');
+      // check client id
+      $client = db_get_client($_REQUEST['client_id']);
+      log_info('-----------------Step  %d Client %s', 2, $client);
+      if(!$client)
+          throw new OidcException('unauthorized_client', 'Client ID not found');
+////
+      if(isset($_REQUEST['redirect_uri'])) {
+        log_info('-----------------Step  %d %s', 3, $_REQUEST['redirect_uri']);
+          if(!is_valid_registered_redirect_uri($client['redirect_uris'], $_REQUEST['redirect_uri']))
+              throw new OidcException('invalid_request', 'no matching redirect_uri');
+      } else
+          throw new OidcException('invalid_request', 'no redirect_uri in request');
+////
+      $error_page = $_REQUEST['redirect_uri'];
 
-/*        if(isset($_REQUEST['redirect_uri'])) {
-            if(!is_valid_registered_redirect_uri($client['redirect_uris'], $_REQUEST['redirect_uri']))
-                throw new OidcException('invalid_request', 'no matching redirect_uri');
-        } else
-            throw new OidcException('invalid_request', 'no redirect_uri in request');
+      $response_mode = get_response_mode($_REQUEST);
+      log_info('-----------------response_mode  %s', $response_mode);
 
-        $error_page = $_REQUEST['redirect_uri'];
-*/
-        $response_mode = get_response_mode($_REQUEST);
+      if(!isset($_REQUEST['response_type']))
+          throw new OidcException('invalid_request', 'no response_type');
+      $response_types = explode(' ', $_REQUEST['response_type']);
+      $known_response_types = array('code', 'token', 'id_token');
+      if(count(array_diff($response_types, $known_response_types)))
+          throw new OidcException('invalid_response_type', "Unknown response_type {$_REQUEST['response_type']}");
 
-        if(!isset($_REQUEST['response_type']))
-            throw new OidcException('invalid_request', 'no response_type');
-        $response_types = explode(' ', $_REQUEST['response_type']);
-        $known_response_types = array('code', 'token', 'id_token');
-        if(count(array_diff($response_types, $known_response_types)))
-            throw new OidcException('invalid_response_type', "Unknown response_type {$_REQUEST['response_type']}");
+      if(ENABLE_PKCE) {
+          if(in_array('code', $response_types)) {
+              if(!isset($_REQUEST['code_challenge']))
+                  throw new OidcException('invalid_request', 'code challenge required');
+              if(isset($_REQUEST['code_challenge_method'])) {
+                  if(!in_array($_REQUEST['code_challenge_method'], array('plain', 'S256')))
+                      throw new OidcException('invalid_request', "unsupported code challenge method {$_REQUEST['code_challenge_method']}");
+              }
+          }
+      }
+      log_info('-----------------Step  %d', 4);
 
-        if(ENABLE_PKCE) {
-            if(in_array('code', $response_types)) {
-                if(!isset($_REQUEST['code_challenge']))
-                    throw new OidcException('invalid_request', 'code challenge required');
-                if(isset($_REQUEST['code_challenge_method'])) {
-                    if(!in_array($_REQUEST['code_challenge_method'], array('plain', 'S256')))
-                        throw new OidcException('invalid_request', "unsupported code challenge method {$_REQUEST['code_challenge_method']}");
-                }
-            }
-        }
+      if(!isset($_REQUEST['scope']))
+          throw new OidcException('invalid_request', 'no scope');
+      $scopes = explode(' ', $_REQUEST['scope']);
+      if(!in_array('openid', $scopes))
+          throw new OidcException('invalid_scope', 'no openid scope');
 
-        if(!isset($_REQUEST['scope']))
-            throw new OidcException('invalid_request', 'no scope');
-        $scopes = explode(' ', $_REQUEST['scope']);
-        if(!in_array('openid', $scopes))
-            throw new OidcException('invalid_scope', 'no openid scope');
+      if(in_array('token', $response_types) || in_array('id_token', $response_types)) {
+          if(!isset($_REQUEST['nonce']))
+              throw new OidcException('invalid_request', 'no nonce');
+      }
 
-        if(in_array('token', $response_types) || in_array('id_token', $response_types)) {
-            if(!isset($_REQUEST['nonce']))
-                throw new OidcException('invalid_request', 'no nonce');
-        }
+      log_info('-----------------Step  %d', 5);
+      $_SESSION['get'] = $_GET;
+      $request_uri = isset($_REQUEST['request_uri']) ? $_REQUEST['request_uri'] : NULL;
 
-        $_SESSION['get'] = $_GET;
-        $request_uri = isset($_REQUEST['request_uri']) ? $_REQUEST['request_uri'] : NULL;
+      $requested_userid = NULL;
+      $requested_userid_display = NULL;
+      $request_object = NULL;
+      if($request_uri) {
+          $request_object = get_url($request_uri);
+          log_info('-----------------Step  %d', 6);
+          if(!$request_object)
+              throw new OidcException('invalid_request', "Unable to fetch request file $request_uri");
+      } elseif(isset($_REQUEST['request']))
+          $request_object = $_REQUEST['request'];
+      if(isset($_GET['claims'])) {
+          $_GET['claims'] = json_decode($_GET['claims'], true);
+          $_REQUEST['claims'] = $_GET['claims'];
+      }
+      if(isset($request_object)) {
+        log_info('-----------------Step  %d', 7);
+          $cryptoError = '';
+          $payload = decrypt_verify_jwt($request_object, $client, $cryptoError);
+          if(!isset($payload)) {
+              if($cryptoError == 'error_decrypt')
+                  throw new OidcException('invalid_request', 'Unable to decrypt request object');
+              elseif($cryptoError == 'error_sig')
+                  throw new OidcException('invalid_request', 'Unable to verify request object signature');
+          } else {
 
-        $requested_userid = NULL;
-        $requested_userid_display = NULL;
-        $request_object = NULL;
-        if($request_uri) {
-            $request_object = get_url($request_uri);
-            if(!$request_object)
-                throw new OidcException('invalid_request', "Unable to fetch request file $request_uri");
-        } elseif(isset($_REQUEST['request']))
-            $request_object = $_REQUEST['request'];
-        if(isset($_GET['claims'])) {
-            $_GET['claims'] = json_decode($_GET['claims'], true);
-            $_REQUEST['claims'] = $_GET['claims'];
-        }
-        if(isset($request_object)) {
-            $cryptoError = '';
-            $payload = decrypt_verify_jwt($request_object, $client, $cryptoError);
-            if(!isset($payload)) {
-                if($cryptoError == 'error_decrypt')
-                    throw new OidcException('invalid_request', 'Unable to decrypt request object');
-                elseif($cryptoError == 'error_sig')
-                    throw new OidcException('invalid_request', 'Unable to verify request object signature');
-            } else {
+            log_info('-----------------Step  %d', 8);
+              if(isset($payload['claims']['id_token'])) {
+                  if(array_key_exists('sub', $payload['claims']['id_token']) && isset($payload['claims']['id_token']['sub']['value'])) {
+                      $requested_userid_display = $payload['claims']['id_token']['sub']['value'];
+                      $requested_userid = unwrap_userid($payload['claims']['id_token']['sub']['value']);
+                      if(!db_get_user($requested_userid))
+                          throw new OidcException('invalid_request', 'Unrecognized userid in request');
+                  }
+              }
+              log_info('-----------------Step  %d', 9);
 
-                if(isset($payload['claims']['id_token'])) {
-                    if(array_key_exists('sub', $payload['claims']['id_token']) && isset($payload['claims']['id_token']['sub']['value'])) {
-                        $requested_userid_display = $payload['claims']['id_token']['sub']['value'];
-                        $requested_userid = unwrap_userid($payload['claims']['id_token']['sub']['value']);
-                        if(!db_get_user($requested_userid))
-                            throw new OidcException('invalid_request', 'Unrecognized userid in request');
-                    }
-                }
+              $merged_req = array_merge($_GET, $payload);
+              if(!array_key_exists('max_age', $merged_req) && $client['default_max_age'])
+                  $merged_req['max_age'] = $client['default_max_age'];
+              if($merged_req['max_age'])
+                  $merged_req['claims']['id_token']['auth_time'] =  array('essential' => true);
+              if((!$merged_req['claims']['id_token'] || !array_key_exists('auth_time', $merged_req['claims']['id_token'])) && $client['require_auth_time'])
+                  $merged_req['claims']['id_token']['auth_time'] = array('essential' => true);
+              if(!$merged_req['claims']['id_token'] || !array_key_exists('acr', $merged_req['claims']['id_token'])) {
+                  if($merged_req['acr_values'])
+                      $merged_req['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $merged_req['acr_values']));
+                  elseif($client['default_acr_values'])
+                      $merged_req['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
+              }
+              $_SESSION['rpfA'] = $merged_req;
+              log_info('-----------------Step  %d', 10);
 
-                $merged_req = array_merge($_GET, $payload);
-                if(!array_key_exists('max_age', $merged_req) && $client['default_max_age'])
-                    $merged_req['max_age'] = $client['default_max_age'];
-                if($merged_req['max_age'])
-                    $merged_req['claims']['id_token']['auth_time'] =  array('essential' => true);
-                if((!$merged_req['claims']['id_token'] || !array_key_exists('auth_time', $merged_req['claims']['id_token'])) && $client['require_auth_time'])
-                    $merged_req['claims']['id_token']['auth_time'] = array('essential' => true);
-                if(!$merged_req['claims']['id_token'] || !array_key_exists('acr', $merged_req['claims']['id_token'])) {
-                    if($merged_req['acr_values'])
-                        $merged_req['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $merged_req['acr_values']));
-                    elseif($client['default_acr_values'])
-                        $merged_req['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
-                }
-                $_SESSION['rpfA'] = $merged_req;
-
-                log_debug("rpfA = %s", print_r($_SESSION['rpfA'], true));
-                foreach(Array('client_id', 'response_type', 'scope', 'nonce', 'redirect_uri') as $key) {
-                    if(!isset($payload[$key]))
-                        log_error("missing %s in payload => %s", $key, print_r($payload, true));
+              log_debug("rpfA = %s", print_r($_SESSION['rpfA'], true));
+              foreach(Array('client_id', 'response_type', 'scope', 'nonce', 'redirect_uri') as $key) {
+                  if(!isset($payload[$key]))
+                      log_error("missing %s in payload => %s", $key, print_r($payload, true));
 //                      throw new OidcException('invalid_request', 'Request Object missing required parameters');
-                }
+              }
+              log_info('-----------------Step  %d', 11);
 
-                log_debug("payload => %s", print_r($payload, true));
-                foreach($payload as $key => $value) {
-                    if(isset($_REQUEST[$key]) && (strcmp($_REQUEST[$key],$value))) {
-                        log_debug("key : %s value:%s", $key, print_r($value, true));
-                        throw new OidcException('invalid_request', "Request Object Param Values do not match request '{$key}' '{$_REQUEST[$key]}' != '{$value}'");
-                    }
-                }
-            }
-        } else {
-            if(isset($_GET['id_token_hint'])) {
-                $cryptoError = '';
-                $payload = decrypt_verify_jwt($_REQUEST['id_token_hint'], $client, $cryptoError);
-                if(!isset($payload)) {
-                    if($cryptoError == 'error_decrypt')
-                        throw new OidcException('invalid_request', 'Unable to decrypt request object');
-                    elseif($cryptoError == 'error_sig')
-                        throw new OidcException('invalid_request', 'Unable to verify request object signature');
-                } else {
-                    $requested_userid_display = $payload['sub'];
-                    $requested_userid = unwrap_userid($payload['sub']);
-                    if(!db_get_user($requested_userid))
-                        throw new OidcException('invalid_request', 'Unrecognized userid in ID Token');
-                }
-            } else if(isset($_GET['claims']['id_token']['sub']['value'])) {
-                $requested_userid_display = $_GET['claims']['id_token']['sub']['value'];
-                $requested_userid = unwrap_userid($_GET['claims']['id_token']['sub']['value']);
-                if(!db_get_user($requested_userid))
-                    throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token");
-            } else if(isset($_GET['login_hint'])) {
-                $principal = $_GET['login_hint'];
+              log_debug("payload => %s", print_r($payload, true));
+              foreach($payload as $key => $value) {
+                  if(isset($_REQUEST[$key]) && (strcmp($_REQUEST[$key],$value))) {
+                      log_debug("key : %s value:%s", $key, print_r($value, true));
+                      throw new OidcException('invalid_request', "Request Object Param Values do not match request '{$key}' '{$_REQUEST[$key]}' != '{$value}'");
+                  }
+              }
+          }
+      } else {
+        log_info('-----------------Step  %d', 12);
+          if(isset($_GET['id_token_hint'])) {
+              $cryptoError = '';
+              $payload = decrypt_verify_jwt($_REQUEST['id_token_hint'], $client, $cryptoError);
+              log_info('-----------------Step  %d', 13);
+            if(!isset($payload)) {
+                  if($cryptoError == 'error_decrypt')
+                      throw new OidcException('invalid_request', 'Unable to decrypt request object');
+                  elseif($cryptoError == 'error_sig')
+                      throw new OidcException('invalid_request', 'Unable to verify request object signature');
+              } else {
+                  $requested_userid_display = $payload['sub'];
+                  $requested_userid = unwrap_userid($payload['sub']);
+                  if(!db_get_user($requested_userid))
+                      throw new OidcException('invalid_request', 'Unrecognized userid in ID Token');
+              }
+          } else if(isset($_GET['claims']['id_token']['sub']['value'])) {
+              $requested_userid_display = $_GET['claims']['id_token']['sub']['value'];
+              $requested_userid = unwrap_userid($_GET['claims']['id_token']['sub']['value']);
+              if(!db_get_user($requested_userid))
+                  throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token");
+          } else if(isset($_GET['login_hint'])) {
+            log_info('-----------------Step  %d', 14);
+            $principal = $_GET['login_hint'];
 
-                $at = strpos($principal, '@');
-                if($at !== false) {
-                    error_log("EMAIL\n");
-                    if($at != 0) {    // XRI
-                        // process email address
-                        list($principal, $domain) = explode('@', $principal);
-                        error_log("==> principal = $principal domain = $domain");
-                        $port_pos = strpos($domain, ':');
-                        if($port_pos !== false)
-                            $domain = substr($domain, 0, $port_pos);
-                        $domain_parts = explode('.', $domain);
-                        $server_parts = explode('.', OP_SERVER_NAME);
-                        // check to see domain matches
-                        $domain_start = count($domain_parts) - 1;
-                        $server_start = count($server_parts) - 1;
-                        $domain_match = true;
-                        for($i = $domain_start, $j = $server_start; $i >= 0 && $j >= 0; $i--, $j--) {
-                            if(strcasecmp($domain_parts[$i], $server_parts[$j]) != 0) {
-                                $domain_match = false;
-                            }
-                        }
-                        if($domain_match) {
-                            $requested_userid_display = $principal;
-                            $requested_userid = unwrap_userid($requested_userid_display);
-                            if(!db_get_user($requested_userid)) {
-                                $requested_userid_display = NULL;
-                                $requested_userid = NULL;
-                            }
-                        } else
-                            throw new OidcException('invalid_request', 'Unrecognized email domain');
-                    }
-                } else { // name only
+              $at = strpos($principal, '@');
+              if($at !== false) {
+                  error_log("EMAIL\n");
+                  if($at != 0) {    // XRI
+                      // process email address
+                      list($principal, $domain) = explode('@', $principal);
+                      error_log("==> principal = $principal domain = $domain");
+                      $port_pos = strpos($domain, ':');
+                      if($port_pos !== false)
+                          $domain = substr($domain, 0, $port_pos);
+                      $domain_parts = explode('.', $domain);
+                      $server_parts = explode('.', OP_SERVER_NAME);
+                      // check to see domain matches
+                      $domain_start = count($domain_parts) - 1;
+                      $server_start = count($server_parts) - 1;
+                      $domain_match = true;
+                      for($i = $domain_start, $j = $server_start; $i >= 0 && $j >= 0; $i--, $j--) {
+                          if(strcasecmp($domain_parts[$i], $server_parts[$j]) != 0) {
+                              $domain_match = false;
+                          }
+                      }
+                      if($domain_match) {
+                          $requested_userid_display = $principal;
+                          $requested_userid = unwrap_userid($requested_userid_display);
+                          if(!db_get_user($requested_userid)) {
+                              $requested_userid_display = NULL;
+                              $requested_userid = NULL;
+                          }
+                      } else
+                          throw new OidcException('invalid_request', 'Unrecognized email domain');
+                  }
+              } else { // name only
+                log_info('-----------------Step  %d', 15);
 
-                    $requested_userid_display = $_GET['login_hint'];
-                    $requested_userid = unwrap_userid($requested_userid_display);
-                    if(!db_get_user($requested_userid)) {
-                        $requested_userid_display = NULL;
-                        $requested_userid = NULL;
-                    }
-                }
+                  $requested_userid_display = $_GET['login_hint'];
+                  $requested_userid = unwrap_userid($requested_userid_display);
+                  if(!db_get_user($requested_userid)) {
+                      $requested_userid_display = NULL;
+                      $requested_userid = NULL;
+                  }
+              }
 
-            }
+          }
+          log_info('-----------------Step  %d',16);
 
-            if(!array_key_exists('max_age', $_REQUEST) && $client['default_max_age'])
-                $_REQUEST['max_age'] = $client['default_max_age'];
-            if($_REQUEST['max_age'])
-                $_REQUEST['claims']['id_token']['auth_time'] =  array('essential' => true);
-            if((!$_REQUEST['claims']['id_token'] || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])) && $client['require_auth_time'])
-                $_REQUEST['claims']['id_token']['auth_time'] = array('essential' => true);
-            if(!$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
-                if($_REQUEST['acr_values'])
-                    $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $_REQUEST['acr_values']));
-                elseif($client['default_acr_values'])
-                    $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
-            }
+          if(!array_key_exists('max_age', $_REQUEST) && $client['default_max_age'])
+              $_REQUEST['max_age'] = $client['default_max_age'];
+          if($_REQUEST['max_age'])
+              $_REQUEST['claims']['id_token']['auth_time'] =  array('essential' => true);
+          if((!$_REQUEST['claims']['id_token'] || !array_key_exists('auth_time', $_REQUEST['claims']['id_token'])) && $client['require_auth_time'])
+              $_REQUEST['claims']['id_token']['auth_time'] = array('essential' => true);
+          if(!$_REQUEST['claims']['id_token'] || !array_key_exists('acr', $_REQUEST['claims']['id_token'])) {
+              if($_REQUEST['acr_values'])
+                  $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode(' ', $_REQUEST['acr_values']));
+              elseif($client['default_acr_values'])
+                  $_REQUEST['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
+          }
 
-            $_SESSION['rpfA'] = $_REQUEST;
-        }
+          $_SESSION['rpfA'] = $_REQUEST;
+      }
+      log_info('-----------------Step  %d', 17);
 
-        log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
-        $prompt = $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
-        $num_prompts = count($prompt);
-        if($num_prompts > 1 && in_array('none', $prompt))
-            throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
-        if(in_array('none', $prompt))
-            $showUI = false;
-        else
-            $showUI = true;
-        log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
+      log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
+      $prompt = $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
+      $num_prompts = count($prompt);
+      if($num_prompts > 1 && in_array('none', $prompt))
+          throw new OidcException('interaction_required', "conflicting prompt parameters {$_SESSION['rpfA']['prompt']}");
+      if(in_array('none', $prompt))
+          $showUI = false;
+      else
+          $showUI = true;
+      log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
 
-        if($_SESSION['username']) {
-            if(in_array('login', $prompt)){
-                echo loginform($requested_userid_display, $requested_userid, $client);
-                exit();
-            }
-            if(isset($_SESSION['rpfA']['max_age'])) {
-                if((time() - $_SESSION['auth_time']) > $_SESSION['rpfA']['max_age']) {
-                    if(!$showUI)
-                        throw new OidcException('interaction_required', 'max_age exceeded and prompt set to none');
-                    echo loginform($requested_userid_display, $requested_userid, $client);
-                    exit;
-                }
-            }
-            if($requested_userid) {
-                if($_SESSION['username'] != $requested_userid) {
-                    if(!$showUI) {
+      if($_SESSION['username']) {
+        log_info('-----------------Step  %d', 18);
+        if(in_array('login', $prompt)){
+              echo loginform($requested_userid_display, $requested_userid, $client);
+              exit();
+          }
+          if(isset($_SESSION['rpfA']['max_age'])) {
+              if((time() - $_SESSION['auth_time']) > $_SESSION['rpfA']['max_age']) {
+                  if(!$showUI)
+                      throw new OidcException('interaction_required', 'max_age exceeded and prompt set to none');
+                  echo loginform($requested_userid_display, $requested_userid, $client);
+                  exit;
+              }
+          }
+          if($requested_userid) {
+              if($_SESSION['username'] != $requested_userid) {
+                  if(!$showUI) {
 //                        throw new OidcException('interaction_required', 'requested account is different from logged in account, no UI requested');
-                    } else {
+                  } else {
 //                        echo loginform($requested_userid_display, $requested_userid, $client);
-                        exit;
-                    }
-                }
-            }
+                      exit;
+                  }
+              }
+          }
 
-            // if(in_array('consent', $prompt)){
-                // echo confirm_userinfo();
-                // exit();
-            // }
-            if(!db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
-                if(!$showUI)
-                    throw new OidcException('interaction_required', 'consent needed and prompt set to none');
+          log_info('-----------------Step  %d', 19);
+          // if(in_array('consent', $prompt)){
+              // echo confirm_userinfo();
+              // exit();
+          // }
+          if(!db_get_user_trusted_client($_SESSION['username'], $_REQUEST['client_id'])) {
+              if(!$showUI)
+                  throw new OidcException('interaction_required', 'consent needed and prompt set to none');
 
-                echo confirm_userinfo();
-            } else
+              echo confirm_userinfo();
+          } else
 
-                send_response_noRedirect($_SESSION['username'], true);
-        } else {
-			// SBE Redirect to auth_time
-			send_auth_response($request_uri, array(), $response_mode);
-		//	header("Location: /auth?client_id=$client_id&response_type=$_REQUEST['response_type']&scope=$_REQUEST['scope']&nonce=$_REQUEST['nonce']");
-		//            if(!$showUI)
+              send_response_noRedirect($_SESSION['username'], true);
+      } else {
+    // SBE Redirect to auth_time
+    log_info('-----------------Step  %d', 20);
+  //  send_auth_response($request_uri, array(), $response_mode);
+    $client_id=$_REQUEST['client_id'];
+    $response_type = $_REQUEST['response_type'];
+    $scope=$_REQUEST['scope'];
+    $nonce=$_REQUEST['nonce'];
+    $redirect_uri=$_REQUEST['redirect_uri'];
+    log_info("Location: /phpOp/index.php/auth?client_id=$client_id&response_type=$response_type&scope=$scope&nonce=$nonce");
+  	header("Location: /phpOp/index.php/auth?client_id=$client_id&redirect_uri=$redirect_uri&response_type=$response_type&scope=$scope&nonce=$nonce");
+  //            if(!$showUI)
 //                throw new OidcException('interaction_required', 'unauthenticated and prompt set to none');
 //            echo custom_loginform($requested_userid_display, $requested_userid, $client);
-        }
-    }
-    catch(OidcException $e) {
-        log_debug("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, $e->error_code, $e->desc, NULL, $state, $response_mode);
-    }
-    catch(Exception $e) {
-        log_debug("handle_auth exception : %s", $e->getTraceAsString());
-        send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state, $response_mode);
-    }
+      }
+  }
+  catch(OidcException $e) {
+      log_debug("handle_auth exception : %s", $e->getTraceAsString());
+      send_error($error_page, $e->error_code, $e->desc, NULL, $state, $response_mode);
+  }
+  catch(Exception $e) {
+      log_debug("handle_auth exception : %s", $e->getTraceAsString());
+      send_error($error_page, 'invalid_request', $e->getMessage(), NULL, $state, $response_mode);
+  }
 }
 
 
