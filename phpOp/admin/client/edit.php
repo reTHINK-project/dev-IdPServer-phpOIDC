@@ -1,4 +1,4 @@
-<? 
+<?php 
 if (isset($_GET['id']) ) {
 $id = (int) $_GET['id']; 
 if (isset($_POST['submitted'])) { 
@@ -64,4 +64,4 @@ $row = mysql_fetch_array ( mysql_query("SELECT * FROM `client` WHERE `id` = '$id
     <p><input type='submit' value='Edit Row' /><input type='hidden' value='1' name='submitted' />
 
 </form>
-<? } ?> 
+<?php } ?> 

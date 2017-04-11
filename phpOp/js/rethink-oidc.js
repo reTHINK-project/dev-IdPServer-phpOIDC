@@ -27,8 +27,8 @@
   var SOURCEURL = "SOURCE_PROTOCOLESOURCE_DOMAIN",
       AUTHPATH = "/phpOp/index.php/auth",
       VERIFYPATH = "/phpOp/index.php/validatetoken",
-      CLIENT_ID='yfVsyslQqwkU_UUuJmEZUg',
-      CLIENT_SECRET = 'dToM94ZAmiQptw',
+      CLIENT_ID='SET_CLIENT_ID',//'yfVsyslQqwkU_UUuJmEZUg',
+      CLIENT_SECRET = 'SET_CLIENT_SECRET'//'dToM94ZAmiQptw',
       DONEPATH='/phpOp/index.php/proxy/done',
       KEYPATH = '/phpOp/index.php/proxy/key',
       IDPATH = '/phpOp/index.php/proxy/id',
@@ -153,6 +153,7 @@ var idp = {
 			  reject({'name': 'IdpLoginError', 'loginUrl': loginURL, 'requestedUrl': _url})
 		})
 	})
+})
 },
 
 

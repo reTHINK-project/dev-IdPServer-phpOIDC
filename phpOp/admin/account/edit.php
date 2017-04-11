@@ -68,4 +68,4 @@ $row = mysql_fetch_array ( mysql_query("SELECT * FROM `account` WHERE `id` = '$i
  </div>
     <p><input type='submit' value='Edit Row' /><input type='hidden' value='1' name='submitted' />
 </form>
-<? } ?>
+<?php } ?>
