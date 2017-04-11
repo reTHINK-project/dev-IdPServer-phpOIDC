@@ -29,10 +29,16 @@ session_start();
 
   function validURL(str) {
   var pattern = new RegExp("((http:\/\/|https:\/\/)(www.)?(([a-zA-Z0-9-]){2,}\.){1,4}([a-zA-Z]){2,6}(\/([a-zA-Z-_\/\.0-9#:?=&;,]*)?)?)",'i'); // fragment locater
-  if(!pattern.test(str)) {
-    return false;
-  } else {
+  if(pattern.test(str)) {
     return true;
+  } else { //IP Adress
+        pattern = new RegExp("((http:\/\/|https:\/\/)(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([a-zA-Z-_\/\.0-9#:?=&;,]*)?)?)");
+	if(pattern.test(str)) {
+	    return true;
+	} else 
+	{
+	    return false;
+	}
   }
 }
     //when the dom has loaded setup form validation rules

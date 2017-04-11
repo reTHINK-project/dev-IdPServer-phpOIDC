@@ -1,4 +1,4 @@
-<?
+<?php
 require_once __DIR__ . '/../../PasswordHash.php';
 
 if (isset($_POST['submitted'])) {

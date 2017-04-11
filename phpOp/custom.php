@@ -5,9 +5,9 @@
  * @return String HTML Login form.
  */
 function custom_loginform($display_name = '', $user_id = '', $client = null, $oplogin=false){
-   
+
    if($display_name && $user_id) {
-		
+
        $userid_field = " <b>{$display_name}</b><input type='hidden' name='username_display' value='{$display_name}'><input type='hidden' name='username' value='{$user_id}'><input type='hidden' name='client_id' value='{$client['client_id']}'><br/>";
    } else {
        $userid_field = "<input type='text' name='username' value=''><input type='hidden' name='client_id' value='{$client['client_id']}'>";
@@ -27,7 +27,7 @@ function custom_loginform($display_name = '', $user_id = '', $client = null, $op
     }
 
    $login_handler = $oplogin ? 'op' : '';
-    
+
    $str='
   <html>
   <head><title> ReThink Authentication </title>
@@ -43,7 +43,7 @@ function custom_loginform($display_name = '', $user_id = '', $client = null, $op
   <input type="submit">
   </form>' . "\n  " . $policy_uri . "\n{$tos_uri}" . '
   </center>
- 
+
   <img src="../../../img/rethink.png" /> Need an account? <a href=../admin/account/index.php?action=new>Signup</a><br/>
   </body>
   </html>
@@ -130,6 +130,59 @@ EOF;
 }
 
 
+
+function register_client_idpproxy_as_a_client($client_id)
+{
+      global $signing_alg_values_supported, $encryption_alg_values_supported, $encryption_enc_values_supported;
+
+      $keys = Array( 'contacts' => NULL,
+          'application_type' => "web",
+          'client_name' => "IdPProxy",
+          'logo_uri' => NULL,
+          'redirect_uris' => OP_PROTOCOL.OP_SERVER_NAME."/phpOp/index.php/proxy/done",
+          'post_logout_redirect_uris' => NULL,
+          'token_endpoint_auth_method' => array('client_secret_basic', 'client_secret_post','private_key_jwt', 'client_secret_jwt'),
+          'token_endpoint_auth_signing_alg' => $signing_alg_values_supported,
+          'policy_uri' => NULL,
+          'tos_uri' => NULL,
+          'jwks_uri' => NULL,
+          'jwks' => NULL,
+          'sector_identifier_uri' => NULL,
+          'subject_type' => array('pairwise', 'public'),
+          'request_object_signing_alg' => $signing_alg_values_supported,
+          'userinfo_signed_response_alg' => $signing_alg_values_supported,
+          'userinfo_encrypted_response_alg' => $encryption_alg_values_supported,
+          'userinfo_encrypted_response_enc' => $encryption_enc_values_supported,
+          'id_token_signed_response_alg' => $signing_alg_values_supported,
+          'id_token_encrypted_response_alg' => $encryption_alg_values_supported,
+          'id_token_encrypted_response_enc' => $encryption_enc_values_supported,
+          'default_max_age' => NULL,
+          'require_auth_time' => NULL,
+          'default_acr_values' => NULL,
+          'initiate_login_uri' => NULL,
+          'request_uris' => NULL,
+          'response_types' => NULL,
+          'grant_types' => NULL,
+
+      );
+
+      $client_secret = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
+      $reg_token = base64url_encode(mcrypt_create_iv(10, MCRYPT_DEV_URANDOM));
+      $reg_client_uri_path = base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+      $params = Array(
+          'client_id' => $client_id,
+          'client_id_issued_at' => time(),
+          'client_secret' => $client_secret,
+          'client_secret_expires_at' => 0,
+          'registration_access_token' => $reg_token,
+          'registration_client_uri_path' => $reg_client_uri_path
+      );
+      log_debug("client registration params = %s", print_r($params, true));
+      db_save_client($client_id, $params);
+
+      return $secret;
+}
+
 /**
  * Provide IDP-Proxy
  */
@@ -139,18 +192,20 @@ function handle_webfinger_idp_proxy()
 	$file = "js/rethink-oidc.js";
 			if (file_exists($file)) {
 					header('Content-Type: application/json');
-					readfile("js/rethink-oidc.js");
+					//readfile("js/rethink-oidc.js");
+          // Insert the server URL in the Javascript file!
+					$str = file_get_contents($file);
+					$str=str_replace("SOURCE_DOMAIN", OP_SERVER_NAME,$str);
+					$str=str_replace("SOURCE_PROTOCOLE", OP_PROTOCOL,$str);
+          // Then get a temp CLIENT_ID and CLIENT_SECRET
+          $client_id=base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+          $secret= register_client_idpproxy_as_a_client($client_id);
+          $str=str_replace("SET_CLIENT_ID", $client_id, $str);
+					$str=str_replace("SET_CLIENT_SECRET", $secret, $str);
+					echo $str;
 					exit;
 			}
 	}
-	elseif(strpos($_SERVER['REQUEST_URI'], '/rethink-proxy') !== false) {
-    $file = "js/rethink-oidc.js";
-            if (file_exists($file)) {
-     		    	header('Content-Type: application/json');
-     				readfile("js/rethink-proxy.js");
-     				exit;
-     		}
-    }
 	else
 	   echo "<html><h1>Not Found</h1></html>";
 	return;
@@ -174,7 +229,7 @@ function webrtc_handle_auth() {
     $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
     $error_page = OP_INDEX_PAGE;
     $response_mode = 'query';
-        
+
     try{
         if(!isset($_REQUEST['client_id']))
             throw new OidcException('invalid_request', 'no client');
