@@ -51,9 +51,15 @@
     			console.log("User authenticated is "+identity.identity)
     		 })
     	})
-  .catch(error => {
-         $('#display1').html("error: "+JSON.stringify(error, null, 4)+"</pre>");
+      .catch(error => {
          console.error("error: ", error)
+         if (error.name === "IdpLoginError")
+         {
+           window.location = error.loginUrl;
+         }
+         else {
+           $('#display1').html("error: "+JSON.stringify(error, null, 4)+"</pre>");
+         }
   })
 	//So that we don't reload the page
 	return false

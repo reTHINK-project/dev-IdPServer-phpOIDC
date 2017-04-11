@@ -176,8 +176,15 @@ function handle_webfinger_idp_proxy()
 					$str=str_replace("SOURCE_DOMAIN", OP_SERVER_NAME,$str);
 					$str=str_replace("SOURCE_PROTOCOLE", OP_PROTOCOL,$str);
           // Then get a temp CLIENT_ID and CLIENT_SECRET
-          $client_id=base64url_encode(mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
-          $secret= register_client_idpproxy($client_id);
+          $client_id=base64url_encode("This is the Client");//mcrypt_create_iv(16, MCRYPT_DEV_URANDOM));
+          $client = db_get_client($client_id);
+          if($client)
+          {
+              $secret = $client['client_secret'];
+          }
+          else {
+              $secret= register_client_idpproxy($client_id);
+          }
           $str=str_replace("SET_CLIENT_ID", $client_id, $str);
 					$str=str_replace("SET_CLIENT_SECRET", $secret, $str);
 					echo $str;
