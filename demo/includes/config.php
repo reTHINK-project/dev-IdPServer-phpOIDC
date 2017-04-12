@@ -22,9 +22,9 @@ date_default_timezone_set("Europe/Paris");
 
 
 
-define('HOST',               'MYSQL_HOST');
-define('USER',               'MYSQL_USER');
-define('PASSWORD',           'MYSQL_PASSWORD');
+define('HOST',               'idp_mysql');
+define('USER',               'oidcAppli');
+define('PASSWORD',           'phpOidcNewPsswd*!');
 define('DATABASE', 'demo');    // The database name.
 
 define('CAN_REGISTER', 'any');
