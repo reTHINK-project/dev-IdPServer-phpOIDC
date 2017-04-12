@@ -204,7 +204,7 @@ function handle_proxy()
         for(var i=0; i<data.length; i+=2){jsonString[data[i]]=data[i+1];}
         var msg = JSON.stringify(jsonString);
         //Unsecure send to all
-        window.opener.postMessage(msg,"*");
+        window.opener.postMessage("LOGINDONE","*");
         window.close();
         </script>';
 }
@@ -214,19 +214,16 @@ function webrtc_handle_auth() {
   $state = isset($_REQUEST['state']) ? $_REQUEST['state'] : NULL;
   $error_page = OP_INDEX_PAGE;
   $response_mode = 'query';
-  log_info('-----------------Step  %d', 1);
 
   try{
       if(!isset($_REQUEST['client_id']))
           throw new OidcException('invalid_request', 'no client');
       // check client id
       $client = db_get_client($_REQUEST['client_id']);
-      log_info('-----------------Step  %d Client %s', 2, $client);
       if(!$client)
           throw new OidcException('unauthorized_client', 'Client ID not found');
 ////
       if(isset($_REQUEST['redirect_uri'])) {
-        log_info('-----------------Step  %d %s', 3, $_REQUEST['redirect_uri']);
           if(!is_valid_registered_redirect_uri($client['redirect_uris'], $_REQUEST['redirect_uri']))
               throw new OidcException('invalid_request', 'no matching redirect_uri');
       } else
@@ -235,7 +232,6 @@ function webrtc_handle_auth() {
       $error_page = $_REQUEST['redirect_uri'];
 
       $response_mode = get_response_mode($_REQUEST);
-      log_info('-----------------response_mode  %s', $response_mode);
 
       if(!isset($_REQUEST['response_type']))
           throw new OidcException('invalid_request', 'no response_type');
@@ -254,7 +250,6 @@ function webrtc_handle_auth() {
               }
           }
       }
-      log_info('-----------------Step  %d', 4);
 
       if(!isset($_REQUEST['scope']))
           throw new OidcException('invalid_request', 'no scope');
@@ -267,7 +262,6 @@ function webrtc_handle_auth() {
               throw new OidcException('invalid_request', 'no nonce');
       }
 
-      log_info('-----------------Step  %d', 5);
       $_SESSION['get'] = $_GET;
       $request_uri = isset($_REQUEST['request_uri']) ? $_REQUEST['request_uri'] : NULL;
 
@@ -276,7 +270,6 @@ function webrtc_handle_auth() {
       $request_object = NULL;
       if($request_uri) {
           $request_object = get_url($request_uri);
-          log_info('-----------------Step  %d', 6);
           if(!$request_object)
               throw new OidcException('invalid_request', "Unable to fetch request file $request_uri");
       } elseif(isset($_REQUEST['request']))
@@ -285,8 +278,8 @@ function webrtc_handle_auth() {
           $_GET['claims'] = json_decode($_GET['claims'], true);
           $_REQUEST['claims'] = $_GET['claims'];
       }
+
       if(isset($request_object)) {
-        log_info('-----------------Step  %d', 7);
           $cryptoError = '';
           $payload = decrypt_verify_jwt($request_object, $client, $cryptoError);
           if(!isset($payload)) {
@@ -296,7 +289,6 @@ function webrtc_handle_auth() {
                   throw new OidcException('invalid_request', 'Unable to verify request object signature');
           } else {
 
-            log_info('-----------------Step  %d', 8);
               if(isset($payload['claims']['id_token'])) {
                   if(array_key_exists('sub', $payload['claims']['id_token']) && isset($payload['claims']['id_token']['sub']['value'])) {
                       $requested_userid_display = $payload['claims']['id_token']['sub']['value'];
@@ -305,7 +297,6 @@ function webrtc_handle_auth() {
                           throw new OidcException('invalid_request', 'Unrecognized userid in request');
                   }
               }
-              log_info('-----------------Step  %d', 9);
 
               $merged_req = array_merge($_GET, $payload);
               if(!array_key_exists('max_age', $merged_req) && $client['default_max_age'])
@@ -321,7 +312,6 @@ function webrtc_handle_auth() {
                       $merged_req['claims']['id_token']['acr'] = array('essential' => true, 'values' => explode('|', $client['default_acr_values']));
               }
               $_SESSION['rpfA'] = $merged_req;
-              log_info('-----------------Step  %d', 10);
 
               log_debug("rpfA = %s", print_r($_SESSION['rpfA'], true));
               foreach(Array('client_id', 'response_type', 'scope', 'nonce', 'redirect_uri') as $key) {
@@ -329,7 +319,6 @@ function webrtc_handle_auth() {
                       log_error("missing %s in payload => %s", $key, print_r($payload, true));
 //                      throw new OidcException('invalid_request', 'Request Object missing required parameters');
               }
-              log_info('-----------------Step  %d', 11);
 
               log_debug("payload => %s", print_r($payload, true));
               foreach($payload as $key => $value) {
@@ -340,11 +329,9 @@ function webrtc_handle_auth() {
               }
           }
       } else {
-        log_info('-----------------Step  %d', 12);
           if(isset($_GET['id_token_hint'])) {
               $cryptoError = '';
               $payload = decrypt_verify_jwt($_REQUEST['id_token_hint'], $client, $cryptoError);
-              log_info('-----------------Step  %d', 13);
             if(!isset($payload)) {
                   if($cryptoError == 'error_decrypt')
                       throw new OidcException('invalid_request', 'Unable to decrypt request object');
@@ -362,7 +349,6 @@ function webrtc_handle_auth() {
               if(!db_get_user($requested_userid))
                   throw new OidcException( 'invalid_request', "Unrecognized userid in ID Token");
           } else if(isset($_GET['login_hint'])) {
-            log_info('-----------------Step  %d', 14);
             $principal = $_GET['login_hint'];
 
               $at = strpos($principal, '@');
@@ -397,7 +383,6 @@ function webrtc_handle_auth() {
                           throw new OidcException('invalid_request', 'Unrecognized email domain');
                   }
               } else { // name only
-                log_info('-----------------Step  %d', 15);
 
                   $requested_userid_display = $_GET['login_hint'];
                   $requested_userid = unwrap_userid($requested_userid_display);
@@ -408,7 +393,6 @@ function webrtc_handle_auth() {
               }
 
           }
-          log_info('-----------------Step  %d',16);
 
           if(!array_key_exists('max_age', $_REQUEST) && $client['default_max_age'])
               $_REQUEST['max_age'] = $client['default_max_age'];
@@ -425,7 +409,6 @@ function webrtc_handle_auth() {
 
           $_SESSION['rpfA'] = $_REQUEST;
       }
-      log_info('-----------------Step  %d', 17);
 
       log_debug("prompt = %s", $_SESSION['rpfA']['prompt']);
       $prompt = $_SESSION['rpfA']['prompt'] ? explode(' ', $_SESSION['rpfA']['prompt']) : array();
@@ -439,7 +422,6 @@ function webrtc_handle_auth() {
       log_debug("num prompt = %d %s", $num_prompts,  print_r($prompt, true));
 
       if($_SESSION['username']) {
-        log_info('-----------------Step  %d', 18);
         if(in_array('login', $prompt)){
               echo loginform($requested_userid_display, $requested_userid, $client);
               exit();
@@ -463,7 +445,6 @@ function webrtc_handle_auth() {
               }
           }
 
-          log_info('-----------------Step  %d', 19);
           // if(in_array('consent', $prompt)){
               // echo confirm_userinfo();
               // exit();
@@ -478,14 +459,12 @@ function webrtc_handle_auth() {
               send_response_noRedirect($_SESSION['username'], true);
       } else {
     // SBE Redirect to auth_time
-    log_info('-----------------Step  %d', 20);
   //  send_auth_response($request_uri, array(), $response_mode);
     $client_id=$_REQUEST['client_id'];
     $response_type = $_REQUEST['response_type'];
     $scope=$_REQUEST['scope'];
     $nonce=$_REQUEST['nonce'];
     $redirect_uri=$_REQUEST['redirect_uri'];
-    log_info("Location: /phpOp/index.php/auth?client_id=$client_id&response_type=$response_type&scope=$scope&nonce=$nonce");
   	header("Location: /phpOp/index.php/auth?client_id=$client_id&redirect_uri=$redirect_uri&response_type=$response_type&scope=$scope&nonce=$nonce");
   //            if(!$showUI)
 //                throw new OidcException('interaction_required', 'unauthenticated and prompt set to none');
@@ -664,9 +643,15 @@ function send_response_noRedirect($username, $authorize = false)
                 else
                     throw new OidcException('access_denied', 'no such user');
             }
+            // SBE add the claim for IdPProxy verification.
+            $idt_claims['rtcsdp'] =  $_REQUEST['rtcsdp'];
+            log_info("B------------------------------------");
+            log_info('claims = %s', print_r($idt_claims, true));
+            log_info('requested_id_token_claims = %s', print_r($requested_id_token_claims, true));
+            log_info("E------------------------------------");
             $id_token_obj = make_id_token(wrap_userid($db_client, $username), SERVER_ID, $client_id, $idt_claims, $nonce, $c_hash, $at_hash, $auth_time, $ops, $acr );
 
-            log_debug('sen_response id_token_obj = %s', print_r($id_token_obj, true));
+            log_debug('send_response id_token_obj = %s', print_r($id_token_obj, true));
             $cryptoError = null;
             $id_token = sign_encrypt($id_token_obj, $sig, $alg, $enc, $jwk_uri, $jwks, $client_secret, $cryptoError);
 

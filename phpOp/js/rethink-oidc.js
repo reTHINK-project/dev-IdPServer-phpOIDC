@@ -27,15 +27,16 @@
   var SOURCEURL = "SOURCE_PROTOCOLESOURCE_DOMAIN",
       AUTHPATH = "/phpOp/index.php/auth",
       VERIFYPATH = "/phpOp/index.php/validatetoken",
-      CLIENT_ID='SET_CLIENT_ID',//'yfVsyslQqwkU_UUuJmEZUg',
-      CLIENT_SECRET = 'SET_CLIENT_SECRET'//'dToM94ZAmiQptw',
+      CLIENT_ID='SET_CLIENT_ID',
+      CLIENT_SECRET = 'SET_CLIENT_SECRET'
       DONEPATH='/phpOp/index.php/proxy/done',
       KEYPATH = '/phpOp/index.php/proxy/key',
       IDPATH = '/phpOp/index.php/proxy/id',
       PROXYTYPE = "rethink-oidc-ns",
-      IDSCOPE = "openid profile",
-      FULLSCOPE = "openid profile webrtc",
+      IDSCOPE = "openid",
+      FULLSCOPE = "openid webrtc",
       TYPE       =   'id_token token',
+      CLAIMS = '{"id_token":{"name": {"essential": true}, "login": {"essential": true}}}',
       RESPONSE_MODE = 'body';
 var idp_addr = {'domain': "SOURCE_DOMAIN", 'protocol': PROXYTYPE}
 
@@ -81,8 +82,7 @@ if (typeof console == "undefined") {
           }
         }
       };
-	  var totor = header.jku;
-      xmlhttp.open("GET", header.jku, true);
+      xmlhttp.open("GET", SOURCEURL + "/phpOp/op.jwk", true); //header.jku, true);
       xmlhttp.send();
     })
   }
@@ -96,21 +96,18 @@ var idp = {
   */
  generateAssertion: function(contents, origin, hint)
 {
-  // TODO : sign contents in the Id Token
      		var _url =   SOURCEURL+AUTHPATH+
                      '?scope=' + FULLSCOPE +
                      '&client_id=' + CLIENT_ID +
                      '&redirect_uri=' + SOURCEURL + DONEPATH +
                      '&response_type=' + TYPE +
+                     '&claims=' + CLAIMS +
                      '&nonce=' + 'N-'+Math.random() +
-                     '&rtcsdp='+btoa(contents)+
+                     '&rtcsdp='+contents+
                      '&response_mode='+RESPONSE_MODE;
+//                     '&origin=' + origin +
 		var myInit = {method: 'GET',
-		              //headers: myHeaders,
 		              credentials: 'same-origin',
-		              // we don't follow redirect so that if user is not logged (redirect)
-		              // we get an error an can return login URL to the application
-		              //redirect: 'error'
 		             };
 
 		return fetch(_url,myInit)
@@ -159,57 +156,25 @@ var idp = {
         return Promise.reject({'name':'IdpError', 'message':'162: Invalid signature on identity assertion'})
   		else {
   			console.log("Token signature validated");
-  			var contents = JSON.parse(atob(payload));
-  			var name = contents.sub.split('@')[0];
+  			payload = JSON.parse(atob(payload));
+
+  			var name = payload.sub.split('@')[0];
         //From peerConnectionIdP.jsm
         let provider = idp_addr.domain;
         let providerPortIdx = provider.indexOf(':');
   		  if (providerPortIdx > 0) {
   			   provider = provider.substring(0, providerPortIdx);
   		  }
-        return Promise.resolve({'identity': name+'@'+provider, 'contents': contents});//, 'acr': json.dummy_acr}) //resolve
+        return Promise.resolve({'identity': name+'@'+provider, 'name':payload.name , 'login':payload.login , 'contents': payload.rtcsdp});//, 'acr': json.dummy_acr}) //resolve
 			//return resolve({"identity": contents.sub+'@'+idp_addr.domain, "contents": contents})
 		  }
     })
     .catch(error => reject({'name':'IdpError', 'message':'171: '+error}))
-},
-
-  /**
- * In relation with a classical Relying Party: Login
- * @param  {Identifier}      identifier      identifier
- * @param  {Scope}           scope           scope
- * @return {Promise}         Promise         IDToken
- */
-  loginWithRP: () => {
-    return new Promise(function(resolve, reject) {
-   //   getProxyKey().then(function(response){
-        var IDPROXYID = CLIENT_ID;//response
-        var _url = SOURCEURL+AUTHPATH+'?scope=' + IDSCOPE + '&client_id=' + IDPROXYID +
-                '&redirect_uri=' + SOURCEURL + DONEPATH + '&response_type=' + TYPE +
-                '&nonce=' + 'N-'+Math.random()
-        // this will open a window with the URL which will open a page sent by google for the user to insert the credentials
-        // when the google validates the credentials then send a access token
-        var win = window.open(_url, 'openIDrequest', 'width=800, height=600');
-
-        // respond to events
-        window.addEventListener('message',function(event) {
-          if(event.origin !== SOURCEURL) return;
-          var res = JSON.parse(event.data)
-          validateAssertion(res.id_token).then(function(response) {
-            resolve(response)
-          }, function(error) {
-            reject(error);
-          })
-        },false);
-      }//, function(error){
-       // reject(error)
-      //})
-    )
-  }
+}
 }
 
 
-if (typeof rtcIdentityProvider != 'undefined') {//true//rtcIdentityProvider) {
+if (typeof rtcIdentityProvider != 'undefined') {
   rtcIdentityProvider.register(idp);
   console.log("Proxy loaded")
 } else {
